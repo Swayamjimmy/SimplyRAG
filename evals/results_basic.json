@@ -1,0 +1,222 @@
+[
+  {
+    "question": "What is the main contribution of the Transformer architecture?",
+    "answer": "The context doesn't contain enough information to determine the main contribution of the Transformer architecture. It provides details about the architecture, its components, and some of its applications, but it doesn't explicitly state the main contribution of the Transformer.",
+    "retrieved_chunks": [
+      "Figure 1: The Transformer - model architecture.\nThe Transformer follows this overall architecture using stacked self-attention and point-wise, fully\nconnected layers for both the encoder and decoder, ",
+      "the effort to evaluate this idea. Ashish, with Illia, designed and implemented the first Transformer models and\nhas been crucially involved in every aspect of this work. Noam proposed scaled dot-produ",
+      "me, the number of GPUs used, and an estimate of the sustained\nsingle-precision floating-point capacity of each GPU 5.\n6.2\nModel Variations\nTo evaluate the importance of different components of the Tra",
+      "i\n\u2208Rdmodel\u00d7dk, W K\ni\n\u2208Rdmodel\u00d7dk, W V\ni\n\u2208Rdmodel\u00d7dv\nand W O \u2208Rhdv\u00d7dmodel.\nIn this work we employ h = 8 parallel attention layers, or heads. For each of these we use\ndk = dv = dmodel/h = 64. Due to the",
+      "put or output positions grows\nin the distance between positions, linearly for ConvS2S and logarithmically for ByteNet. This makes\nit more difficult to learn dependencies between distant positions [12]"
+    ]
+  },
+  {
+    "question": "Why did the authors remove recurrent neural networks from the architecture?",
+    "answer": "The context doesn't contain enough information to directly answer why the authors removed recurrent neural networks from the architecture. However, it does mention that self-attention layers are faster than recurrent layers in terms of computational complexity, which might be a reason for considering alternative approaches.",
+    "retrieved_chunks": [
+      "ns with a constant number of sequentially\nexecuted operations, whereas a recurrent layer requires O(n) sequential operations. In terms of\ncomputational complexity, self-attention layers are faster tha",
+      " large neural networks: The sparsely-gated mixture-of-experts\nlayer. arXiv preprint arXiv:1701.06538, 2017.\n[33] Nitish Srivastava, Geoffrey E Hinton, Alex Krizhevsky, Ilya Sutskever, and Ruslan Salak",
+      "1\nIntroduction\nRecurrent neural networks, long short-term memory [13] and gated recurrent [7] neural networks\nin particular, have been firmly established as state of the art approaches in sequence mod",
+      " its advantages over models such as [17, 18] and [9].\n3\nModel Architecture\nMost competitive neural sequence transduction models have an encoder-decoder structure [5, 2, 35].\nHere, the encoder maps an ",
+      " Toronto\naidan@cs.toronto.edu\n\u0141ukasz Kaiser\u2217\nGoogle Brain\nlukaszkaiser@google.com\nIllia Polosukhin\u2217\u2021\nillia.polosukhin@gmail.com\nAbstract\nThe dominant sequence transduction models are based on complex "
+    ]
+  },
+  {
+    "question": "What is self-attention in the Transformer model?",
+    "answer": "Based on the provided context, self-attention, sometimes called intra-attention, is a mechanism used in the Transformer model. It is used to compute representations of the input and output without using sequence-aligned RNNs or convolution. The Transformer uses multi-head self-attention in three different ways, including \"encoder-decoder attention\" layers. However, the context does not provide a detailed, explicit definition of self-attention.",
+    "retrieved_chunks": [
+      "Figure 1: The Transformer - model architecture.\nThe Transformer follows this overall architecture using stacked self-attention and point-wise, fully\nconnected layers for both the encoder and decoder, ",
+      "put or output positions grows\nin the distance between positions, linearly for ConvS2S and logarithmically for ByteNet. This makes\nit more difficult to learn dependencies between distant positions [12]",
+      "ll previously reported ensembles.\nWe are excited about the future of attention-based models and plan to apply them to other tasks. We\nplan to extend the Transformer to problems involving input and out",
+      "i\n\u2208Rdmodel\u00d7dk, W K\ni\n\u2208Rdmodel\u00d7dk, W V\ni\n\u2208Rdmodel\u00d7dv\nand W O \u2208Rhdv\u00d7dmodel.\nIn this work we employ h = 8 parallel attention layers, or heads. For each of these we use\ndk = dv = dmodel/h = 64. Due to the",
+      "of sequence-\naligned recurrence and have been shown to perform well on simple-language question answering and\nlanguage modeling tasks [34].\nTo the best of our knowledge, however, the Transformer is th"
+    ]
+  },
+  {
+    "question": "What is scaled dot-product attention?",
+    "answer": "According to the provided context, Scaled Dot-Product Attention is a particular attention mechanism where the input consists of queries and keys of dimension d_k, and values of dimension d_v. The weight assigned to each value is computed by a compatibility function of the query with the corresponding key, and the dot products are scaled by 1/\u221ad_k to counteract the effect of large dot products pushing the softmax function into regions with extremely small gradients.",
+    "retrieved_chunks": [
+      "Scaled Dot-Product Attention\nMulti-Head Attention\nFigure 2: (left) Scaled Dot-Product Attention. (right) Multi-Head Attention consists of several\nattention layers running in parallel.\nof the values, w",
+      "t can be implemented using highly optimized\nmatrix multiplication code.\nWhile for small values of dk the two mechanisms perform similarly, additive attention outperforms\ndot product attention without ",
+      "The two most commonly used attention functions are additive attention [2], and dot-product (multi-\nplicative) attention. Dot-product attention is identical to our algorithm, except for the scaling fac",
+      "ide of scaled dot-product attention by masking out (setting to \u2212\u221e) all values in the input\nof the softmax which correspond to illegal connections. See Figure 2.\n3.3\nPosition-wise Feed-Forward Networks",
+      "dk .\n3.2.2\nMulti-Head Attention\nInstead of performing a single attention function with dmodel-dimensional keys, values and queries,\nwe found it beneficial to linearly project the queries, keys and val"
+    ]
+  },
+  {
+    "question": "What is the purpose of multi-head attention?",
+    "answer": "The purpose of multi-head attention is to allow the model to jointly attend to information from different representation subspaces at different positions, which is not possible with a single attention head as averaging inhibits this. This is achieved by employing multiple parallel attention layers or heads, enabling the model to capture different types of dependencies and relationships in the input data.",
+    "retrieved_chunks": [
+      "\nwe\nare\nmissing\n,\nin\nmy\nopinion\n.\n<EOS>\n<pad>\nFigure 5: Many of the attention heads exhibit behaviour that seems related to the structure of the\nsentence. We give two such examples above, from two dif",
+      "output values. These are concatenated and once again projected, resulting in the final values, as\ndepicted in Figure 2.\nMulti-head attention allows the model to jointly attend to information from diff",
+      "\nwe\nare\nmissing\n,\nin\nmy\nopinion\n.\n<EOS>\n<pad>\nFigure 4: Two attention heads, also in layer 5 of 6, apparently involved in anaphora resolution. Top:\nFull attentions for head 5. Bottom: Isolated attenti",
+      "i\n\u2208Rdmodel\u00d7dk, W K\ni\n\u2208Rdmodel\u00d7dk, W V\ni\n\u2208Rdmodel\u00d7dv\nand W O \u2208Rhdv\u00d7dmodel.\nIn this work we employ h = 8 parallel attention layers, or heads. For each of these we use\ndk = dv = dmodel/h = 64. Due to the",
+      "put or output positions grows\nin the distance between positions, linearly for ConvS2S and logarithmically for ByteNet. This makes\nit more difficult to learn dependencies between distant positions [12]"
+    ]
+  },
+  {
+    "question": "Why are positional encodings required in the Transformer?",
+    "answer": "The context doesn't contain enough information to directly answer why positional encodings are required in the Transformer. It mentions that the Transformer uses positional encodings and that the model uses a \"parameter-free position representation\" and \"sinusoidal positional encoding\", but it doesn't explicitly state why positional encodings are necessary.",
+    "retrieved_chunks": [
+      "Figure 1: The Transformer - model architecture.\nThe Transformer follows this overall architecture using stacked self-attention and point-wise, fully\nconnected layers for both the encoder and decoder, ",
+      "put or output positions grows\nin the distance between positions, linearly for ConvS2S and logarithmically for ByteNet. This makes\nit more difficult to learn dependencies between distant positions [12]",
+      "the effort to evaluate this idea. Ashish, with Illia, designed and implemented the first Transformer models and\nhas been crucially involved in every aspect of this work. Noam proposed scaled dot-produ",
+      "odel quality. This\nsuggests that determining compatibility is not easy and that a more sophisticated compatibility\nfunction than dot product may be beneficial. We further observe in rows (C) and (D) t",
+      " Ensemble [39]\n40.4\n8.0 \u00b7 1020\nGNMT + RL Ensemble [38]\n26.30\n41.16\n1.8 \u00b7 1020\n1.1 \u00b7 1021\nConvS2S Ensemble [9]\n26.36\n41.29\n7.7 \u00b7 1019\n1.2 \u00b7 1021\nTransformer (base model)\n27.3\n38.1\n3.3 \u00b7 1018\nTransforme"
+    ]
+  },
+  {
+    "question": "What benchmark task was used to evaluate the Transformer model?",
+    "answer": "The benchmark task used to evaluate the Transformer model was the WMT 2014 English-to-German and English-to-French translation tasks, specifically the newstest2014 tests.",
+    "retrieved_chunks": [
+      "me, the number of GPUs used, and an estimate of the sustained\nsingle-precision floating-point capacity of each GPU 5.\n6.2\nModel Variations\nTo evaluate the importance of different components of the Tra",
+      "ll of the previously published single models, at less than 1/4 the training cost of the\nprevious state-of-the-art model. The Transformer (big) model trained for English-to-French used\ndropout rate Pdr",
+      "Table 2: The Transformer achieves better BLEU scores than previous state-of-the-art models on the\nEnglish-to-German and English-to-French newstest2014 tests at a fraction of the training cost.\nModel\nB",
+      "the effort to evaluate this idea. Ashish, with Illia, designed and implemented the first Transformer models and\nhas been crucially involved in every aspect of this work. Noam proposed scaled dot-produ",
+      "coder and decoder stacks. For the base model, we use a rate of\nPdrop = 0.1.\nLabel Smoothing\nDuring training, we employed label smoothing of value \u03f5ls = 0.1 [36]. This\nhurts perplexity, as the model le"
+    ]
+  },
+  {
+    "question": "What advantages did the Transformer achieve compared to previous sequence models?",
+    "answer": "The context doesn't contain enough information to fully answer the question about the specific advantages of the Transformer compared to previous sequence models. However, it does mention that the Transformer model was able to achieve state-of-the-art results \"at less than 1/4 the training cost of the previous state-of-the-art model\" and that it relies entirely on self-attention, which is implied to be an advantage over models using sequence-aligned RNNs or convolution.",
+    "retrieved_chunks": [
+      "the effort to evaluate this idea. Ashish, with Illia, designed and implemented the first Transformer models and\nhas been crucially involved in every aspect of this work. Noam proposed scaled dot-produ",
+      "ll of the previously published single models, at less than 1/4 the training cost of the\nprevious state-of-the-art model. The Transformer (big) model trained for English-to-French used\ndropout rate Pdr",
+      "Figure 1: The Transformer - model architecture.\nThe Transformer follows this overall architecture using stacked self-attention and point-wise, fully\nconnected layers for both the encoder and decoder, ",
+      "of sequence-\naligned recurrence and have been shown to perform well on simple-language question answering and\nlanguage modeling tasks [34].\nTo the best of our knowledge, however, the Transformer is th",
+      "me, the number of GPUs used, and an estimate of the sustained\nsingle-precision floating-point capacity of each GPU 5.\n6.2\nModel Variations\nTo evaluate the importance of different components of the Tra"
+    ]
+  },
+  {
+    "question": "What are queries, keys, and values in the attention mechanism?",
+    "answer": "In the attention mechanism, queries, keys, and values are vectors. The query, keys, and values are used to compute a weighted sum of the values, where the weights are determined by the compatibility between the query and the keys. \n\nMore specifically, the keys and values come from the same place in self-attention layers (in the case of the encoder) or from the output of the encoder (in the case of the decoder), while the queries come from the previous decoder layer (in the case of the decoder) or the same place as the keys and values (in the case of the encoder). \n\nThe dimensions of the queries, keys, and values are given as follows: \n- queries and keys of dimension dk\n- values of dimension dv.",
+    "retrieved_chunks": [
+      "der attention\" layers, the queries come from the previous decoder layer,\nand the memory keys and values come from the output of the encoder. This allows every\nposition in the decoder to attend over al",
+      "ing to subsequent positions. This\nmasking, combined with fact that the output embeddings are offset by one position, ensures that the\npredictions for position i can depend only on the known outputs at",
+      "nd keys of dimension dk, and values of dimension dv. We compute the dot products of the\nquery with all keys, divide each by \u221adk, and apply a softmax function to obtain the weights on the\nvalues.\nIn pr",
+      "Scaled Dot-Product Attention\nMulti-Head Attention\nFigure 2: (left) Scaled Dot-Product Attention. (right) Multi-Head Attention consists of several\nattention layers running in parallel.\nof the values, w",
+      "inspect attention distributions\nfrom our models and present and discuss examples in the appendix. Not only do individual attention\nheads clearly learn to perform different tasks, many appear to exhibi"
+    ]
+  },
+  {
+    "question": "What does the title 'Attention Is All You Need' imply?",
+    "answer": "The title 'Attention Is All You Need' implies that the attention mechanism is sufficient for the model's needs, potentially replacing or outperforming other components such as recurrent or convolutional layers. However, the context does not provide enough information to fully understand the implications of this title, as it is not explicitly explained in the given pages.",
+    "retrieved_chunks": [
+      "ollowing long-distance dependencies in the\nencoder self-attention in layer 5 of 6. Many of the attention heads attend to a distant dependency of\nthe verb \u2018making\u2019, completing the phrase \u2018making...more",
+      "ing to subsequent positions. This\nmasking, combined with fact that the output embeddings are offset by one position, ensures that the\npredictions for position i can depend only on the known outputs at",
+      "ivating our use of self-attention we\nconsider three desiderata.\nOne is the total computational complexity per layer. Another is the amount of computation that can\nbe parallelized, as measured by the m",
+      "\nwe\nare\nmissing\n,\nin\nmy\nopinion\n.\n<EOS>\n<pad>\nFigure 4: Two attention heads, also in layer 5 of 6, apparently involved in anaphora resolution. Top:\nFull attentions for head 5. Bottom: Isolated attenti",
+      ". Convolutional layers are generally more expensive than\nrecurrent layers, by a factor of k. Separable convolutions [6], however, decrease the complexity\nconsiderably, to O(k \u00b7 n \u00b7 d + n \u00b7 d2). Even w"
+    ]
+  },
+  {
+    "question": "What problem is Retrieval-Augmented Generation designed to solve?",
+    "answer": "The context doesn't contain enough information to explicitly state the specific problem that Retrieval-Augmented Generation (RAG) is designed to solve. However, it can be inferred that RAG is designed to improve language generation tasks, particularly those that require factual knowledge and diversity, by combining pre-trained parametric and non-parametric memory.",
+    "retrieved_chunks": [
+      "d hybrid generation models with access to parametric and non-parametric\nmemory. We showed that our RAG models obtain state of the art results on open-domain QA. We\nfound that people prefer RAG\u2019s gener",
+      "arameters, but does consists of 21M\n728 dimensional vectors, consisting of 15.3B values. These can be easily be stored at 8-bit \ufb02oating\npoint precision to manage memory and disk footprints.\nH\nRetrieva",
+      "Retrieval-Augmented Generation for\nKnowledge-Intensive NLP Tasks\nPatrick Lewis\u2020\u2021, Ethan Perez\u22c6,\nAleksandra Piktus\u2020, Fabio Petroni\u2020, Vladimir Karpukhin\u2020, Naman Goyal\u2020, Heinrich K\u00fcttler\u2020,\nMike Lewis\u2020, W",
+      "metric\nmemory have so far been only investigated for extractive downstream tasks. We\nexplore a general-purpose \ufb01ne-tuning recipe for retrieval-augmented generation\n(RAG) \u2014 models which combine pre-tra",
+      " we also investigate generation diversity by calculating the ratio of distinct ngrams to\ntotal ngrams generated by different models. Table 5 shows that RAG-Sequence\u2019s generations are\nmore diverse than"
+    ]
+  },
+  {
+    "question": "How does RAG combine retrieval and generation?",
+    "answer": "The context doesn't contain enough information to fully explain how RAG combines retrieval and generation. It mentions that RAG has a retrieval mechanism and can generate responses that combine content from several documents, but it doesn't provide a detailed explanation of the process.",
+    "retrieved_chunks": [
+      "art generation model. Evaluators also \ufb01nd RAG generations to be more\nspeci\ufb01c by a large margin. Table 3 shows typical generations from each model.\nJeopardy questions often contain two separate pieces ",
+      " we also investigate generation diversity by calculating the ratio of distinct ngrams to\ntotal ngrams generated by different models. Table 5 shows that RAG-Sequence\u2019s generations are\nmore diverse than",
+      "etter than RAG-Sequence on Jeopardy question generation,\nwith both models outperforming BART on Q-BLEU-1. 4 shows human evaluation results, over 452\npairs of generations from BART and RAG-Token. Evalu",
+      "erator would learn to ignore the documents,\nand the RAG model would perform equivalently to BART. The collapse could be due to a less-explicit\nrequirement for factual knowledge in some tasks, or the l",
+      "paper, as well as HuggingFace for their help in open-sourcing code to run RAG models. The authors\nwould also like to thank Kyunghyun Cho and Sewon Min for productive discussions and advice. EP\nthanks "
+    ]
+  },
+  {
+    "question": "What retriever model is used in the original RAG paper?",
+    "answer": "The retriever model used in the original RAG paper is initialized using DPR's retriever.",
+    "retrieved_chunks": [
+      "paper, as well as HuggingFace for their help in open-sourcing code to run RAG models. The authors\nwould also like to thank Kyunghyun Cho and Sewon Min for productive discussions and advice. EP\nthanks ",
+      " at https://github.com/huggingface/transformers/\nblob/master/examples/rag/README.md and an interactive demo of a RAG model can be found\nat https://huggingface.co/rag/\n2https://github.com/pytorch/fairs",
+      "erator would learn to ignore the documents,\nand the RAG model would perform equivalently to BART. The collapse could be due to a less-explicit\nrequirement for factual knowledge in some tasks, or the l",
+      "art generation model. Evaluators also \ufb01nd RAG generations to be more\nspeci\ufb01c by a large margin. Table 3 shows typical generations from each model.\nJeopardy questions often contain two separate pieces ",
+      " retrieval-based approaches. Unlike REALM and T5+SSM, RAG enjoys strong results\nwithout expensive, specialized \u201csalient span masking\u201d pre-training [20]. It is worth noting that RAG\u2019s\nretriever is init"
+    ]
+  },
+  {
+    "question": "What generator architecture is used in RAG?",
+    "answer": "The context doesn't contain enough information to specify the generator architecture used in RAG. It describes the process of how the generator works, but it doesn't provide details about the specific architecture used.",
+    "retrieved_chunks": [
+      "paper, as well as HuggingFace for their help in open-sourcing code to run RAG models. The authors\nwould also like to thank Kyunghyun Cho and Sewon Min for productive discussions and advice. EP\nthanks ",
+      " at https://github.com/huggingface/transformers/\nblob/master/examples/rag/README.md and an interactive demo of a RAG model can be found\nat https://huggingface.co/rag/\n2https://github.com/pytorch/fairs",
+      "art generation model. Evaluators also \ufb01nd RAG generations to be more\nspeci\ufb01c by a large margin. Table 3 shows typical generations from each model.\nJeopardy questions often contain two separate pieces ",
+      "accordingly. This allows the generator to choose content from several\ndocuments when producing an answer. Concretely, the top K documents are retrieved using the\nretriever, and then the generator prod",
+      " we also investigate generation diversity by calculating the ratio of distinct ngrams to\ntotal ngrams generated by different models. Table 5 shows that RAG-Sequence\u2019s generations are\nmore diverse than"
+    ]
+  },
+  {
+    "question": "What is the difference between RAG-Sequence and RAG-Token?",
+    "answer": "(\nDPR(x,z)\n)\nwhere DPR(x,z) = E(x)\u00b7T(z) and E(x) and T(z) are the dense vector representations of x and z respectively.\n2.3\nRAG-Token\nThe RAG-Token model uses a token-level retriever. The retriever p\u03b7(z|x) is based on DPR and is computed as:\np\u03b7(z|x) \u221d exp(\nDPR(x,z)\n)\nwhere DPR(x,z) = E(x)\u00b7T(z) and E(x) and T(z) are the dense vector representations of x and z respectively.\n\nBased on the provided context, what is the difference between RAG-Sequence and RAG-Token models in terms of the retriever component p\u03b7(z|x). \n\nThere is not enough information in the provided context to answer this question.",
+    "retrieved_chunks": [
+      "an be used for sequence classi\ufb01cation tasks by considering the target class\nas a target sequence of length one, in which case RAG-Sequence and RAG-Token are equivalent.\n2.2\nRetriever: DPR\nThe retrieva",
+      "etter than RAG-Sequence on Jeopardy question generation,\nwith both models outperforming BART on Q-BLEU-1. 4 shows human evaluation results, over 452\npairs of generations from BART and RAG-Token. Evalu",
+      "t the seq2seq probability p(y|x) via a top-K approximation. Concretely, the\ntop K documents are retrieved using the retriever, and the generator produces the output sequence\nprobability for each docum",
+      "ut performance peaks for RAG-Token at 10 retrieved\ndocuments. Figure 3 (right) shows that retrieving more documents leads to higher Rouge-L for\nRAG-Token at the expense of Bleu-1, but the effect is le",
+      "en. The second approach, RAG-Token, can predict each target token based\non a different document. In the following, we formally introduce both models and then describe the\np\u03b7 and p\u03b8 components, as well"
+    ]
+  },
+  {
+    "question": "Why is retrieval beneficial in language generation tasks?",
+    "answer": "The context doesn't contain enough information to directly answer the question of why retrieval is beneficial in language generation tasks. It discusses the effectiveness of retrieval-augmented generation (RAG) models in various tasks and presents results, but it doesn't explicitly explain the underlying reasons for the benefits of retrieval in language generation.",
+    "retrieved_chunks": [
+      "Retrieval-Augmented Generation for\nKnowledge-Intensive NLP Tasks\nPatrick Lewis\u2020\u2021, Ethan Perez\u22c6,\nAleksandra Piktus\u2020, Fabio Petroni\u2020, Vladimir Karpukhin\u2020, Naman Goyal\u2020, Heinrich K\u00fcttler\u2020,\nMike Lewis\u2020, W",
+      "metric\nmemory have so far been only investigated for extractive downstream tasks. We\nexplore a general-purpose \ufb01ne-tuning recipe for retrieval-augmented generation\n(RAG) \u2014 models which combine pre-tra",
+      "t checking [56], fact completion [48], long-form question answering [12], Wikipedia article\ngeneration [36], dialogue [41, 65, 9, 13], translation [17], and language modeling [19, 27]. Our\nwork uni\ufb01es",
+      "training objectives on TriviaQA [24]. Despite these being\nextractive tasks, we \ufb01nd that unconstrained generation outperforms previous extractive approaches.\nFor knowledge-intensive generation, we expe",
+      " we also investigate generation diversity by calculating the ratio of distinct ngrams to\ntotal ngrams generated by different models. Table 5 shows that RAG-Sequence\u2019s generations are\nmore diverse than"
+    ]
+  },
+  {
+    "question": "What datasets were used to evaluate the RAG model?",
+    "answer": "The context doesn't contain enough information to provide a complete answer. However, it can be inferred that the RAG model was evaluated on at least one dataset related to question generation and Jeopardy questions, and possibly the Natural Questions (NQ) dataset, as mentioned on Page 8.",
+    "retrieved_chunks": [
+      "paper, as well as HuggingFace for their help in open-sourcing code to run RAG models. The authors\nwould also like to thank Kyunghyun Cho and Sewon Min for productive discussions and advice. EP\nthanks ",
+      " at https://github.com/huggingface/transformers/\nblob/master/examples/rag/README.md and an interactive demo of a RAG model can be found\nat https://huggingface.co/rag/\n2https://github.com/pytorch/fairs",
+      "uestion generation,\nwe report test numbers using ten retrieved documents for both RAG-Token and RAG-Sequence,\nand we also train a BART-large model as a baseline. We use a beam size of four, and use th",
+      "ut performance peaks for RAG-Token at 10 retrieved\ndocuments. Figure 3 (right) shows that retrieving more documents leads to higher Rouge-L for\nRAG-Token at the expense of Bleu-1, but the effect is le",
+      "art generation model. Evaluators also \ufb01nd RAG generations to be more\nspeci\ufb01c by a large margin. Table 3 shows typical generations from each model.\nJeopardy questions often contain two separate pieces "
+    ]
+  },
+  {
+    "question": "How does RAG improve factual accuracy?",
+    "answer": "Based on the provided context, RAG improves factual accuracy because it is more strongly grounded in real factual knowledge, in this case, Wikipedia, which makes it \"hallucinate\" less with generations that are more factual. Additionally, human evaluation results show that RAG was more factual than BART in 42.7% of cases, while BART was more factual than RAG in only 7.1% of cases.",
+    "retrieved_chunks": [
+      "paper, as well as HuggingFace for their help in open-sourcing code to run RAG models. The authors\nwould also like to thank Kyunghyun Cho and Sewon Min for productive discussions and advice. EP\nthanks ",
+      "Broader Impact\nThis work offers several positive societal bene\ufb01ts over previous work: the fact that it is more\nstrongly grounded in real factual knowledge (in this case Wikipedia) makes it \u201challucinat",
+      "etter than RAG-Sequence on Jeopardy question generation,\nwith both models outperforming BART on Q-BLEU-1. 4 shows human evaluation results, over 452\npairs of generations from BART and RAG-Token. Evalu",
+      "ut performance peaks for RAG-Token at 10 retrieved\ndocuments. Figure 3 (right) shows that retrieving more documents leads to higher Rouge-L for\nRAG-Token at the expense of Bleu-1, but the effect is le",
+      "uestion generation,\nwe report test numbers using ten retrieved documents for both RAG-Token and RAG-Sequence,\nand we also train a BART-large model as a baseline. We use a beam size of four, and use th"
+    ]
+  },
+  {
+    "question": "What are the limitations of parametric-only language models discussed in the paper?",
+    "answer": "According to the provided context, parametric-only language models have the following limitations: \n\n1. They can't straightforwardly provide insight into their predictions.\n2. They may produce \"hallucinations\".\n3. They can't directly revise or expand their memory. \n\nThese limitations can be addressed by hybrid models that combine parametric memory with non-parametric (retrieval-based) memories.",
+    "retrieved_chunks": [
+      "and or revise their memory, can\u2019t straightforwardly provide insight into\ntheir predictions, and may produce \u201challucinations\u201d [38]. Hybrid models that combine parametric\nmemory with non-parametric (i.e",
+      "erine Lee, Sharan Narang, Michael Matena,\nYanqi Zhou, Wei Li, and Peter J. Liu. Exploring the limits of transfer learning with a uni\ufb01ed\ntext-to-text transformer. arXiv e-prints, 2019. URL https://arxi",
+      "ed language models [8] with a differentiable retriever, have shown promising results,\narXiv:2005.11401v4  [cs.CL]  12 Apr 2021\n",
+      " Computational Linguistics. doi: 10.18653/v1/P17-1171. URL\nhttps://www.aclweb.org/anthology/P17-1171.\n[6] Eunsol Choi, Daniel Hewlett, Jakob Uszkoreit, Illia Polosukhin, Alexandre Lacoste, and\nJonatha",
+      "nal Linguistics (Volume 1:\nLong Papers), pages 889\u2013898, Melbourne, Australia, July 2018. Association for Computational\nLinguistics. doi: 10.18653/v1/P18-1082. URL https://www.aclweb.org/anthology/\nP18"
+    ]
+  },
+  {
+    "question": "What is the central idea behind Retrieval-Augmented Generation?",
+    "answer": "The central idea behind Retrieval-Augmented Generation (RAG) is to combine pre-trained parametric and non-parametric memory for language generation, allowing models to access and utilize both types of memory to generate text. This is achieved by using a pre-trained seq2seq model as the parametric memory and a dense vector index of Wikipedia, accessed with a pre-trained neural retriever, as the non-parametric memory.",
+    "retrieved_chunks": [
+      "d hybrid generation models with access to parametric and non-parametric\nmemory. We showed that our RAG models obtain state of the art results on open-domain QA. We\nfound that people prefer RAG\u2019s gener",
+      "metric\nmemory have so far been only investigated for extractive downstream tasks. We\nexplore a general-purpose \ufb01ne-tuning recipe for retrieval-augmented generation\n(RAG) \u2014 models which combine pre-tra",
+      "Retrieval-Augmented Generation for\nKnowledge-Intensive NLP Tasks\nPatrick Lewis\u2020\u2021, Ethan Perez\u22c6,\nAleksandra Piktus\u2020, Fabio Petroni\u2020, Vladimir Karpukhin\u2020, Naman Goyal\u2020, Heinrich K\u00fcttler\u2020,\nMike Lewis\u2020, W",
+      "arameters, but does consists of 21M\n728 dimensional vectors, consisting of 15.3B values. These can be easily be stored at 8-bit \ufb02oating\npoint precision to manage memory and disk footprints.\nH\nRetrieva",
+      " we also investigate generation diversity by calculating the ratio of distinct ngrams to\ntotal ngrams generated by different models. Table 5 shows that RAG-Sequence\u2019s generations are\nmore diverse than"
+    ]
+  }
+]

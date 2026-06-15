@@ -1,0 +1,122 @@
+[
+{
+"question": "What is the main contribution of the Transformer architecture?",
+"reference_answer": "The Transformer introduces a sequence transduction model based entirely on attention mechanisms, removing recurrence and convolution.",
+"source_document": "attention_is_all_you_need.pdf",
+"keywords": ["transformer", "attention", "architecture"]
+},
+{
+"question": "Why did the authors remove recurrent neural networks from the architecture?",
+"reference_answer": "Recurrence limits parallelization and increases training time; attention enables greater parallelization.",
+"source_document": "attention_is_all_you_need.pdf",
+"keywords": ["recurrence", "parallelization", "attention"]
+},
+{
+"question": "What is self-attention in the Transformer model?",
+"reference_answer": "Self-attention allows each position in a sequence to attend to all other positions in the same sequence.",
+"source_document": "attention_is_all_you_need.pdf",
+"keywords": ["self-attention", "sequence", "attention"]
+},
+{
+"question": "What is scaled dot-product attention?",
+"reference_answer": "Scaled dot-product attention computes attention weights using query-key similarity scaled by the square root of the key dimension.",
+"source_document": "attention_is_all_you_need.pdf",
+"keywords": ["scaled dot-product", "query", "key", "attention"]
+},
+{
+"question": "What is the purpose of multi-head attention?",
+"reference_answer": "Multi-head attention allows the model to attend to information from different representation subspaces simultaneously.",
+"source_document": "attention_is_all_you_need.pdf",
+"keywords": ["multi-head", "attention", "representation"]
+},
+{
+"question": "Why are positional encodings required in the Transformer?",
+"reference_answer": "Positional encodings provide information about token order because the model contains no recurrence.",
+"source_document": "attention_is_all_you_need.pdf",
+"keywords": ["positional encoding", "token order", "sequence"]
+},
+{
+"question": "What benchmark task was used to evaluate the Transformer model?",
+"reference_answer": "The Transformer was evaluated primarily on machine translation tasks such as WMT 2014 English-German and English-French translation.",
+"source_document": "attention_is_all_you_need.pdf",
+"keywords": ["WMT", "translation", "benchmark"]
+},
+{
+"question": "What advantages did the Transformer achieve compared to previous sequence models?",
+"reference_answer": "It achieved better translation quality while requiring significantly less training time.",
+"source_document": "attention_is_all_you_need.pdf",
+"keywords": ["advantages", "translation", "training"]
+},
+{
+"question": "What are queries, keys, and values in the attention mechanism?",
+"reference_answer": "Queries, keys, and values are learned vector representations used to compute attention scores and outputs.",
+"source_document": "attention_is_all_you_need.pdf",
+"keywords": ["queries", "keys", "values"]
+},
+{
+"question": "What does the title 'Attention Is All You Need' imply?",
+"reference_answer": "It suggests that attention mechanisms alone are sufficient for effective sequence modeling without recurrence or convolution.",
+"source_document": "attention_is_all_you_need.pdf",
+"keywords": ["attention", "sequence modeling", "title"]
+},
+{
+"question": "What problem is Retrieval-Augmented Generation designed to solve?",
+"reference_answer": "RAG addresses the limitation of storing all knowledge solely in model parameters by incorporating external retrieval.",
+"source_document": "rag_paper.pdf",
+"keywords": ["RAG", "retrieval", "knowledge"]
+},
+{
+"question": "How does RAG combine retrieval and generation?",
+"reference_answer": "RAG retrieves relevant documents from a knowledge source and conditions a generator on the retrieved content.",
+"source_document": "rag_paper.pdf",
+"keywords": ["retrieval", "generation", "documents"]
+},
+{
+"question": "What retriever model is used in the original RAG paper?",
+"reference_answer": "The original RAG paper uses Dense Passage Retrieval (DPR) as the retriever.",
+"source_document": "rag_paper.pdf",
+"keywords": ["DPR", "retriever", "dense passage retrieval"]
+},
+{
+"question": "What generator architecture is used in RAG?",
+"reference_answer": "RAG uses a sequence-to-sequence transformer generator based on BART.",
+"source_document": "rag_paper.pdf",
+"keywords": ["BART", "generator", "transformer"]
+},
+{
+"question": "What is the difference between RAG-Sequence and RAG-Token?",
+"reference_answer": "RAG-Sequence conditions generation on a fixed set of retrieved documents, while RAG-Token allows retrieval to influence each generated token.",
+"source_document": "rag_paper.pdf",
+"keywords": ["RAG-Sequence", "RAG-Token", "retrieval"]
+},
+{
+"question": "Why is retrieval beneficial in language generation tasks?",
+"reference_answer": "Retrieval provides access to up-to-date and factual information beyond the model's parameters.",
+"source_document": "rag_paper.pdf",
+"keywords": ["retrieval", "factuality", "knowledge"]
+},
+{
+"question": "What datasets were used to evaluate the RAG model?",
+"reference_answer": "RAG was evaluated on open-domain question answering and knowledge-intensive NLP tasks.",
+"source_document": "rag_paper.pdf",
+"keywords": ["datasets", "question answering", "evaluation"]
+},
+{
+"question": "How does RAG improve factual accuracy?",
+"reference_answer": "RAG grounds generated responses in retrieved evidence from external documents.",
+"source_document": "rag_paper.pdf",
+"keywords": ["factual accuracy", "evidence", "retrieval"]
+},
+{
+"question": "What are the limitations of parametric-only language models discussed in the paper?",
+"reference_answer": "Parametric-only models struggle to update knowledge and may hallucinate facts not present in training data.",
+"source_document": "rag_paper.pdf",
+"keywords": ["parametric memory", "hallucination", "knowledge update"]
+},
+{
+"question": "What is the central idea behind Retrieval-Augmented Generation?",
+"reference_answer": "The central idea is to combine neural retrieval with neural text generation to improve knowledge-intensive tasks.",
+"source_document": "rag_paper.pdf",
+"keywords": ["RAG", "retrieval", "generation", "knowledge-intensive"]
+}
+]

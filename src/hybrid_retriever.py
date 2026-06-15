@@ -1,45 +1,121 @@
-from langchain.retrievers import EnsembleRetriever
+from collections import defaultdict
+
 from langchain_community.retrievers import BM25Retriever as LangChainBM25
 from langchain_core.documents import Document
 
 
 class HybridRetriever:
-    """Combines BM25 keyword search and ChromaDB vector search using Reciprocal Rank Fusion."""
+    """
+    Hybrid retriever combining:
+    1. BM25 keyword retrieval
+    2. ChromaDB vector retrieval
+    using Reciprocal Rank Fusion (RRF).
+    """
 
     def __init__(self, chunks, chroma_collection, embedding_function):
-        # Convert chunks to LangChain Document format for BM25
+        # Convert project chunks into LangChain Documents
         documents = [
-            Document(page_content=c["text"], metadata=c["metadata"])
-            for c in chunks
+            Document(
+                page_content=chunk["text"],
+                metadata=chunk["metadata"]
+            )
+            for chunk in chunks
         ]
 
-        # Initialize LangChain BM25 retriever from documents
+        # BM25 Retriever
         self.bm25_retriever = LangChainBM25.from_documents(documents)
         self.bm25_retriever.k = 5
 
-        # Initialize ChromaDB vector retriever via LangChain interface
-        from langchain_community.vectorstores import Chroma
-        vectorstore = Chroma(
-            collection_name=chroma_collection.name,
-            persist_directory="chroma_db",
-            embedding_function=embedding_function
-        )
-        self.vector_retriever = vectorstore.as_retriever(
-            search_kwargs={"k": 5}
+        # Direct ChromaDB access
+        self.chroma_collection = chroma_collection
+
+        # SentenceTransformer model
+        self.embedding_model = embedding_function
+
+    def _vector_search(self, query, k=5):
+        """
+        Query ChromaDB directly using SentenceTransformer embeddings.
+        """
+
+        query_embedding = self.embedding_model.encode(query).tolist()
+
+        results = self.chroma_collection.query(
+            query_embeddings=[query_embedding],
+            n_results=k
         )
 
-        # Combine with EnsembleRetriever using equal weights and RRF
-        self.ensemble = EnsembleRetriever(
-            retrievers=[self.bm25_retriever, self.vector_retriever],
-            weights=[0.5, 0.5]
+        documents = results["documents"][0]
+        metadatas = results["metadatas"][0]
+
+        vector_results = []
+
+        for doc, metadata in zip(documents, metadatas):
+            vector_results.append(
+                Document(
+                    page_content=doc,
+                    metadata=metadata
+                )
+            )
+
+        return vector_results
+
+    def _rrf_fusion(self, bm25_results, vector_results, rrf_k=60):
+        """
+        Reciprocal Rank Fusion.
+
+        Score(doc) = Σ 1 / (rrf_k + rank)
+        """
+
+        scores = defaultdict(float)
+        doc_lookup = {}
+
+        # BM25 rankings
+        for rank, doc in enumerate(bm25_results, start=1):
+            doc_id = doc.page_content
+
+            scores[doc_id] += 1.0 / (rrf_k + rank)
+            doc_lookup[doc_id] = doc
+
+        # Vector rankings
+        for rank, doc in enumerate(vector_results, start=1):
+            doc_id = doc.page_content
+
+            scores[doc_id] += 1.0 / (rrf_k + rank)
+            doc_lookup[doc_id] = doc
+
+        ranked_docs = sorted(
+            scores.items(),
+            key=lambda x: x[1],
+            reverse=True
         )
+
+        return [
+            doc_lookup[doc_id]
+            for doc_id, _ in ranked_docs
+        ]
 
     def retrieve(self, query, k=5):
-        """Return top-k results merged with Reciprocal Rank Fusion."""
-        # EnsembleRetriever handles RRF fusion internally
-        results = self.ensemble.invoke(query)
-        # Convert back to project format
+        """
+        Hybrid retrieval:
+        BM25 + Vector Search + RRF
+        """
+
+        bm25_results = self.bm25_retriever.invoke(query)
+
+        vector_results = self._vector_search(
+            query=query,
+            k=k
+        )
+
+        fused_results = self._rrf_fusion(
+            bm25_results,
+            vector_results
+        )
+
         return [
-            {"text": doc.page_content, "metadata": doc.metadata}
-            for doc in results[:k]
+            {
+                "text": doc.page_content,
+                "metadata": doc.metadata
+            }
+            for doc in fused_results[:k]
         ]
