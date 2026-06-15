@@ -6,6 +6,10 @@ from src.hybrid_retriever import HybridRetriever
 from src.reranker import CrossEncoderReranker
 from src.ingest import ingest_pdf
 from src.embeddings import get_collection, get_embedding_function
+from src.citations import (
+    Citation, CitationResponse, extract_citations,
+    verify_citation, compute_citation_accuracy
+)
 
 load_dotenv()
 
@@ -136,3 +140,64 @@ Answer:"""
         }
 
     
+class CitedRAGPipeline:
+    """RAG pipeline with inline citation grounding and verification."""
+
+    def __init__(self, reranker, hybrid_retriever):
+        self.reranker = reranker
+        self.hybrid_retriever = hybrid_retriever
+        self.llm = Groq(api_key=os.getenv("GROQ_API_KEY"))
+
+    def format_sources(self, chunks: list[dict]) -> str:
+        """Format retrieved chunks as numbered sources for the prompt."""
+        sources = []
+        for i, chunk in enumerate(chunks, 1):
+            sources.append(f'Source [{i}]: "{chunk["text"]}"')
+        return "\n\n".join(sources)
+
+    def query(self, question: str) -> CitationResponse:
+        """Run the full cited RAG pipeline with verification."""
+        # Retrieve and rerank documents
+        raw_results = self.hybrid_retriever.retrieve(question, k=20)
+        reranked = self.reranker.rerank(question, raw_results, top_n=5)
+
+        # Format sources with numbered markers
+        sources_text = self.format_sources(reranked)
+
+        # Instruct the LLM to cite sources inline
+        prompt = (
+            "Answer the question using ONLY the provided sources.\n"
+            "For every factual claim, add an inline citation marker [N] "
+            "referencing the source number.\n\n"
+            f"Sources:\n{sources_text}\n\n"
+            f"Question: {question}\n\n"
+            "Answer with inline citations:"
+        )
+
+        response = self.llm.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0
+        )
+
+        answer_text = response.choices[0].message.content
+
+        # Extract citations and verify each one
+        extracted = extract_citations(answer_text)
+        citations = []
+
+        for claim, idx in extracted:
+            if 1 <= idx <= len(reranked):
+                chunk = reranked[idx - 1]
+                # Verify the source actually supports the claim
+                is_verified = verify_citation(
+                    claim, chunk["text"], self.llm
+                )
+                citations.append(Citation(
+                    source_doc=chunk["metadata"]["source"],
+                    page_number=chunk["metadata"]["page"],
+                    passage=chunk["text"],
+                    verified=is_verified
+                ))
+
+        return CitationResponse(answer=answer_text, citations=citations)
