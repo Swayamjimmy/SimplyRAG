@@ -40,7 +40,7 @@ def chunk_text(pages, chunk_size=512, overlap=50):
             start += chunk_size - overlap
     return chunks
 
-def ingest_pdfs(data_dir="data"):
+def ingest_pdf(data_dir="data"):
     """Load all PDFs from a directory and return chunked text."""
     all_chunks = []
     for filename in os.listdir(data_dir):
