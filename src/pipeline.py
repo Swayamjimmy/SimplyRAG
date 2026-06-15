@@ -3,6 +3,9 @@ from dotenv import load_dotenv
 from groq import Groq
 from src.retriever import BasicRetriever
 from src.hybrid_retriever import HybridRetriever
+from src.reranker import CrossEncoderReranker
+from src.ingest import ingest_pdf
+from src.embeddings import get_collection, get_embedding_function
 
 load_dotenv()
 
@@ -82,3 +85,54 @@ Answer:"""
             "answer": response.choices[0].message.content,
             "retrieved_chunks": retrieved
         }
+
+
+# ... existing classes (BasicRAGPipeline, HybridRAGPipeline) ...
+
+class RerankedRAGPipeline:
+    """RAG pipeline with hybrid search and cross-encoder reranking."""
+
+    def __init__(self):
+        # 1. Load required shared resources internally
+        chunks = ingest_pdf("data/")
+        chroma_collection = get_collection()
+        embedding_function = get_embedding_function()
+
+        # 2. Initialize retriever with its required dependencies
+        self.retriever = HybridRetriever(chunks, chroma_collection, embedding_function)
+        self.reranker = CrossEncoderReranker()
+        self.llm_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+
+    def query(self, question):
+        """Retrieve top-20, rerank to top-5, then generate answer."""
+        # Over-retrieve: get 20 candidates from hybrid search
+        candidates = self.retriever.retrieve(question, k=20)
+
+        # Rerank: score each candidate against the query, keep top-5
+        top_docs = self.reranker.rerank(question, candidates, top_n=5)
+
+        # Format context from reranked documents
+        context = "\n\n".join([doc["text"] for doc in top_docs])
+
+        # Generate answer using Groq LLM
+        prompt = f"""Answer the following question based ONLY on the provided context.
+If the context does not contain enough information, say so.
+
+Context:
+{context}
+
+Question: {question}
+
+Answer:"""
+
+        response = self.llm_client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[{"role": "user", "content": prompt}]
+        )
+
+        return {
+            "answer": response.choices[0].message.content,
+            "sources": top_docs
+        }
+
+    
