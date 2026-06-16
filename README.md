@@ -125,7 +125,7 @@ The system processes documents through three stages:
 
 ## Architecture
 
-![System Architecture](docs/architecture.png)
+![System Architecture](docs/architecure.png)
 
 ### Retrieval Flow
 
