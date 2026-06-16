@@ -13,45 +13,68 @@ class HybridRetriever:
     """
 
     def __init__(self, chunks, chroma_collection, embedding_function):
-        # Convert project chunks into LangChain Documents
-        documents = self.load_documents_from_chroma()
+            # 1. Assign attributes FIRST so load_documents_from_chroma can use them
+            self.chroma_collection = chroma_collection
+            self.embedding_model = embedding_function
+            
+            # 2. Build the initial BM25 index
+            self.refresh_bm25()
 
-        # BM25 Retriever
+    def refresh_bm25(self):
+        """Rebuilds the BM25 index from the latest state of ChromaDB."""
+        documents = self.load_documents_from_chroma()
+        from langchain_community.retrievers import BM25Retriever as LangChainBM25
         self.bm25_retriever = LangChainBM25.from_documents(documents)
         self.bm25_retriever.k = 5
 
-        # Direct ChromaDB access
-        self.chroma_collection = chroma_collection
-
-        # SentenceTransformer model
-        self.embedding_model = embedding_function
-
-    def _vector_search(self, query, k=5):
-        """
-        Query ChromaDB directly using SentenceTransformer embeddings.
-        """
-
+    def _vector_search(self, query, k=5, source_filter=None):
         query_embedding = self.embedding_model.encode(query).tolist()
+        
+        # Build query arguments dynamically to include the filter if it exists
+        query_kwargs = {
+            "query_embeddings": [query_embedding],
+            "n_results": k
+        }
+        
+        # Tell ChromaDB to ONLY look at chunks from a specific file
+        if source_filter:
+            query_kwargs["where"] = {"source": source_filter}
 
-        results = self.chroma_collection.query(
-            query_embeddings=[query_embedding],
-            n_results=k
-        )
+        results = self.chroma_collection.query(**query_kwargs)
 
-        documents = results["documents"][0]
-        metadatas = results["metadatas"][0]
+        documents = results["documents"][0] if results["documents"] else []
+        metadatas = results["metadatas"][0] if results["metadatas"] else []
 
         vector_results = []
-
         for doc, metadata in zip(documents, metadatas):
-            vector_results.append(
-                Document(
-                    page_content=doc,
-                    metadata=metadata
-                )
-            )
+            vector_results.append(Document(page_content=doc, metadata=metadata))
 
         return vector_results
+
+    def retrieve(self, query, k=5, source_filter=None):
+        # Fetch extra BM25 results so we have enough left over after filtering
+        self.bm25_retriever.k = k * 10
+        raw_bm25 = self.bm25_retriever.invoke(query)
+        
+        # Filter BM25 results manually based on the filename
+        if source_filter:
+            bm25_results = [doc for doc in raw_bm25 if doc.metadata.get("source") == source_filter][:k]
+        else:
+            bm25_results = raw_bm25[:k]
+
+        # Filter Vector results directly via ChromaDB
+        vector_results = self._vector_search(query=query, k=k, source_filter=source_filter)
+
+        # Execute Reciprocal Rank Fusion
+        fused_docs = self._rrf_fusion(bm25_results, vector_results)
+
+        return [
+            {
+                "text": doc.page_content,
+                "metadata": doc.metadata
+            }
+            for doc in fused_docs[:k]
+        ]
 
     def _rrf_fusion(self, bm25_results, vector_results, rrf_k=60):
         """
@@ -88,32 +111,12 @@ class HybridRetriever:
             for doc_id, _ in ranked_docs
         ]
 
-    def retrieve(self, query, k=5):
-        """
-        Hybrid retrieval:
-        BM25 + Vector Search + RRF
-        """
-
-        bm25_results = self.bm25_retriever.invoke(query)
-
-        vector_results = self._vector_search(
-            query=query,
-            k=k
-        )
-
-       
-
-        return [
-            {
-                "text": doc.page_content,
-                "metadata": doc.metadata
-            }
-            for doc in vector_results[:k]
-        ]
     def load_documents_from_chroma(self):
-
+        # FIX 1: Add a massive limit to guarantee ChromaDB returns ALL chunks, 
+        # ensuring the BM25 index sees your newly uploaded files.
         data = self.chroma_collection.get(
-            include=["documents", "metadatas"]
+            include=["documents", "metadatas"],
+            limit=100000 
         )
 
         return [
@@ -126,3 +129,5 @@ class HybridRetriever:
                 data["metadatas"]
             )
         ]
+
+    

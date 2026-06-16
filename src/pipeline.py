@@ -97,20 +97,26 @@ class RerankedRAGPipeline:
     """RAG pipeline with hybrid search and cross-encoder reranking."""
 
     def __init__(self):
-        # 1. Load required shared resources internally
         chunks = ingest_pdf("data/")
         chroma_collection = get_collection()
         embedding_function = get_embedding_function()
 
-        # 2. Initialize retriever with its required dependencies
         self.retriever = HybridRetriever(chunks, chroma_collection, embedding_function)
         self.reranker = CrossEncoderReranker()
         self.llm_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+        
+        # State variable to hold the active document filter
+        self.current_source_filter = None
 
     def query(self, question):
         """Retrieve top-20, rerank to top-5, then generate answer."""
-        # Over-retrieve: get 20 candidates from hybrid search
-        candidates = self.retriever.retrieve(question, k=20)
+        
+        # Pass the active filter down to the retriever
+        candidates = self.retriever.retrieve(
+            question, 
+            k=20, 
+            source_filter=self.current_source_filter
+        )
 
         # Rerank: score each candidate against the query, keep top-5
         top_docs = self.reranker.rerank(question, candidates, top_n=5)
@@ -134,11 +140,11 @@ Answer:"""
             messages=[{"role": "user", "content": prompt}]
         )
 
+        # The crucial return statement that ensures the Agent gets its data back!
         return {
             "answer": response.choices[0].message.content,
             "sources": top_docs
         }
-
     
 class CitedRAGPipeline:
     """RAG pipeline with inline citation grounding and verification."""

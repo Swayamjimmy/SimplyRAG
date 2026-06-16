@@ -56,9 +56,18 @@ async def ingest_document(file: UploadFile):
 
     try:
 
+        # 1. Extract chunks
         chunks = ingest_pdf(
             os.path.dirname(tmp_path)
         )
+
+        # 2. FIX: Store the chunks in ChromaDB
+        from src.embeddings import store_chunks
+        store_chunks(chunks)
+
+        # 3. FIX: Refresh the global BM25 index
+        from src.agent import PIPELINE
+        PIPELINE.retriever.refresh_bm25()
 
         return {
             "filename": file.filename,

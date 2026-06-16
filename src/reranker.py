@@ -16,6 +16,10 @@ class CrossEncoderReranker:
 
     def rerank(self, query, docs, top_n=5):
         """Score each query-document pair and return the top_n most relevant."""
+        
+        # FIX: Prevent crash if the retriever finds zero matching documents
+        if not docs:
+            return []
 
         pairs = [
             (query, doc["text"])

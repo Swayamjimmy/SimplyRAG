@@ -23,17 +23,23 @@ INTENT_EMOJIS = {
 
 
 def process_upload(file):
-
     if file is None:
         return "No file uploaded."
 
     chunks = ingest_pdf(file)
-
     store_chunks(chunks)
 
+    # Extract the exact filename (e.g., 'resume.pdf')
+    filename = file.split('/')[-1]
+
+    # FIX: Lock the global pipeline to ONLY search the new file
+    from src.agent import PIPELINE
+    PIPELINE.current_source_filter = filename
+    PIPELINE.retriever.refresh_bm25()
+
     return (
-        f"Indexed {len(chunks)} chunks "
-        f"from {file.split('/')[-1]}"
+        f"Indexed {len(chunks)} chunks from {filename}. "
+        f"The agent is now focused ONLY on this document."
     )
 
 def chat(message, history):

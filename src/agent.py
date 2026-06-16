@@ -110,28 +110,17 @@ def handle_query(
     state: AgentState,
     instruction: str = ""
 ):
+    # Get the clean, latest question
+    latest_question = state["messages"][-1].content
 
-    latest_question = (
-        state["messages"][-1].content
-    )
+    # FIX: Stop embedding the conversation history!
+    # Only pass the raw question (and the specific node instruction) to the retriever.
+    search_query = latest_question
+    if instruction:
+        search_query = f"{latest_question} {instruction}"
 
-    history = build_conversational_query(
-        state["messages"][:-1]
-    )
-
-    query = f"""
-Conversation History:
-
-{history}
-
-Current User Question:
-
-{latest_question}
-
-{instruction}
-"""
-
-    result = run_rag(query)
+    # Run RAG with the highly specific search query
+    result = run_rag(search_query)
 
     return {
         "retrieved_documents": result["sources"],
