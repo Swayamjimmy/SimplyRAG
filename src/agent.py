@@ -9,6 +9,7 @@ from langgraph.graph.message import add_messages
 from langgraph.checkpoint.memory import MemorySaver
 
 from langchain_groq import ChatGroq
+from src.embeddings import get_collection
 from langchain_core.messages import HumanMessage, AIMessage
 
 from src.pipeline import RerankedRAGPipeline
@@ -17,6 +18,7 @@ load_dotenv()
 
 # Load once
 PIPELINE = RerankedRAGPipeline()
+collection = get_collection()
 
 
 class AgentState(TypedDict):
@@ -164,13 +166,44 @@ def comparison_node(state: AgentState):
 
 
 def table_analysis_node(state: AgentState):
-    return handle_query(
-        state,
-        instruction=(
-            "Analyze numerical data, "
-            "metrics, and tables."
-        ),
+
+    query = build_conversational_query(
+        state["messages"]
     )
+
+    multimodal_results = collection.query(
+        query_texts=[query],
+        n_results=5,
+        where={
+            "content_type": {
+                "$in": ["image", "table"]
+            }
+        }
+    )
+
+    docs = multimodal_results["documents"][0]
+
+    context = "\n\n".join(docs)
+
+    prompt = f"""
+Analyze the following tables, figures and numerical data.
+
+Question:
+{query}
+
+Context:
+{context}
+"""
+
+    response = llm.invoke(prompt)
+
+    return {
+        "retrieved_documents": docs,
+        "current_document_context": response.content,
+        "messages": [
+            AIMessage(content=response.content)
+        ]
+    }
 
 
 def grade_documents(

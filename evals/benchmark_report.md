@@ -23,3 +23,11 @@
 | Hybrid Search | 129.31 |
 | Hybrid + Reranking | 125.35 |
 | Cited RAG | 132.31 |
+
+## Multimodal Understanding Results
+
+| Query Type | Routed To | Retrieved Multimodal Chunks | Answer Quality |
+|------------|-----------|----------------------------|----------------|
+| Table data question | Table Analysis | Yes (table markdown) | Accurate |
+| Chart interpretation | Table Analysis | Yes (image description) | Accurate |
+| Text-only question | Retrieval | No (text chunks only) | Accurate |

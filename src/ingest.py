@@ -1,5 +1,6 @@
 import pymupdf as fitz  # PyMuPDF for reading PDF files
 import os
+from src.multimodal import extract_multimodal_content
 
 def load_pdf(file_path):
     """Load a PDF file and extract text from each page."""
@@ -38,16 +39,45 @@ def chunk_text(pages, chunk_size=512, overlap=50):
                 })
                 chunk_index += 1
             start += chunk_size - overlap
+    
     return chunks
 
 def ingest_pdf(data_dir="data"):
-    """Load all PDFs from a directory and return chunked text."""
+    """Load all PDFs and extract text, tables, and images."""
+
     all_chunks = []
+
     for filename in os.listdir(data_dir):
-        if filename.endswith(".pdf"):
-            file_path = os.path.join(data_dir, filename)
-            pages = load_pdf(file_path)
-            chunks = chunk_text(pages)
-            all_chunks.extend(chunks)
-    print(f"Ingested {len(all_chunks)} chunks from {data_dir}")
+
+        if not filename.endswith(".pdf"):
+            continue
+
+        file_path = os.path.join(
+            data_dir,
+            filename
+        )
+
+        # text chunks
+        pages = load_pdf(file_path)
+
+        text_chunks = chunk_text(pages)
+
+        all_chunks.extend(text_chunks)
+
+        # multimodal chunks
+        multimodal_chunks = (
+            extract_multimodal_content(
+                file_path
+            )
+        )
+
+        all_chunks.extend(
+            multimodal_chunks
+        )
+
+    print(
+        f"Ingested {len(all_chunks)} chunks "
+        f"from {data_dir}"
+    )
+
     return all_chunks
