@@ -14,13 +14,7 @@ class HybridRetriever:
 
     def __init__(self, chunks, chroma_collection, embedding_function):
         # Convert project chunks into LangChain Documents
-        documents = [
-            Document(
-                page_content=chunk["text"],
-                metadata=chunk["metadata"]
-            )
-            for chunk in chunks
-        ]
+        documents = self.load_documents_from_chroma()
 
         # BM25 Retriever
         self.bm25_retriever = LangChainBM25.from_documents(documents)
@@ -107,15 +101,28 @@ class HybridRetriever:
             k=k
         )
 
-        fused_results = self._rrf_fusion(
-            bm25_results,
-            vector_results
-        )
+       
 
         return [
             {
                 "text": doc.page_content,
                 "metadata": doc.metadata
             }
-            for doc in fused_results[:k]
+            for doc in vector_results[:k]
+        ]
+    def load_documents_from_chroma(self):
+
+        data = self.chroma_collection.get(
+            include=["documents", "metadatas"]
+        )
+
+        return [
+            Document(
+                page_content=doc,
+                metadata=meta
+            )
+            for doc, meta in zip(
+                data["documents"],
+                data["metadatas"]
+            )
         ]

@@ -394,3 +394,6 @@ def stream_query(
                     print(
                         latest.content
                     )
+
+def build_graph():
+    return graph
