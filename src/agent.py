@@ -12,12 +12,25 @@ from langchain_groq import ChatGroq
 from src.embeddings import get_collection
 from langchain_core.messages import HumanMessage, AIMessage
 
-from src.pipeline import RerankedRAGPipeline
+from src.pipeline import RerankedRAGPipeline, CitedRAGPipeline
+
+# ... (keep other imports) ...
+
+# Bootstrap the base pipeline to initialize the database and models
+BASE_PIPELINE = RerankedRAGPipeline()
+
+# FIX 4: Wrap the base components inside your Cited pipeline
+PIPELINE = CitedRAGPipeline(
+    reranker=BASE_PIPELINE.reranker,
+    hybrid_retriever=BASE_PIPELINE.retriever
+)
+collection = get_collection()
+
+# ... (keep AgentState, router, etc.) ...
 
 load_dotenv()
 
 # Load once
-PIPELINE = RerankedRAGPipeline()
 collection = get_collection()
 
 
@@ -106,28 +119,40 @@ def run_rag(query: str):
     return PIPELINE.query(query)
 
 
+
+
 def handle_query(
     state: AgentState,
     instruction: str = ""
 ):
-    # Get the clean, latest question
     latest_question = state["messages"][-1].content
 
-    # FIX: Stop embedding the conversation history!
-    # Only pass the raw question (and the specific node instruction) to the retriever.
+    # Only pass the raw question to the retriever
     search_query = latest_question
     if instruction:
         search_query = f"{latest_question} {instruction}"
 
-    # Run RAG with the highly specific search query
+    # Run the Cited RAG pipeline
     result = run_rag(search_query)
 
+    # FIX 5: Convert the Pydantic Citation objects into dictionaries for Gradio
+    citations_dicts = [
+        {
+            "source": c.source_doc,
+            "page_number": c.page_number,
+            "passage": c.passage,
+            "verified": c.verified
+        }
+        for c in result.citations
+    ]
+
     return {
-        "retrieved_documents": result["sources"],
-        "current_document_context": result["answer"],
+        "retrieved_documents": citations_dicts,  # Keeps the grader node happy
+        "current_document_context": result.answer,
+        "citations": citations_dicts,            # Sends data to the UI!
         "messages": [
             AIMessage(
-                content=result["answer"]
+                content=result.answer
             )
         ],
     }

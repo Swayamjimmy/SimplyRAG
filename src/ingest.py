@@ -39,7 +39,7 @@ def chunk_text(pages, chunk_size=512, overlap=50):
                 })
                 chunk_index += 1
             start += chunk_size - overlap
-    
+        
     return chunks
 
 def ingest_pdf(path="data"):
@@ -66,7 +66,11 @@ def ingest_pdf(path="data"):
 
         return all_chunks
 
-    # Directory of PDFs
+    # Directory of PDFs - Safely handle missing or empty directories
+    if not os.path.exists(path):
+        os.makedirs(path, exist_ok=True)
+        return all_chunks
+
     for filename in os.listdir(path):
 
         if not filename.endswith(".pdf"):

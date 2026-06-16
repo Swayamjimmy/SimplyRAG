@@ -1,3 +1,13 @@
+---
+title: SimplyRAG
+emoji: 📚
+colorFrom: blue
+colorTo: green
+sdk: gradio
+app_file: src/app.py
+pinned: false
+---
+
 # Document Intelligence Agent
 
 ![Python](https://img.shields.io/badge/Python-3.10%2B-blue)
@@ -7,7 +17,7 @@
 
 > A production-grade RAG system that ingests PDF documents and answers questions using hybrid search, cross-encoder reranking, agentic query routing, citation grounding, conversation memory, and streaming responses.
 
-**[Live Demo on Hugging Face Spaces](https://huggingface.co/spaces/YOUR_USERNAME/rag-system)** | [Architecture](#architecture) | [Benchmarks](#evaluation-results) | [Quick Start](#quick-start)
+**[Live Demo on Hugging Face Spaces](https://huggingface.co/spaces/swmi/SimplyRAG)** | [Architecture](#architecture) | [Benchmarks](#evaluation-results) | [Quick Start](#quick-start)
 
 ---
 
@@ -46,7 +56,7 @@
 
 ```bash
 # Clone the repository
-git clone https://github.com/YOUR_USERNAME/rag-system.git
+git clone https://github.com/Swayamjimmy/rag-system.git
 cd rag-system
 
 # Create and activate virtual environment
@@ -153,30 +163,6 @@ The system processes documents through three stages:
 | Agentic (Full System) | ~3.1s |
 
 *Measured on Groq API with llama-3.3-70b-versatile. Streaming provides first-token latency of ~0.3s.*
-
----
-
-## Screenshots
-
-### Chat Interface
-![Chat Interface](docs/screenshots/chat_interface.png)
-
-### Citation Cards
-![Citation Cards](docs/screenshots/citation_cards.png)
-
-### Metrics Dashboard
-![Metrics Dashboard](docs/screenshots/metrics_dashboard.png)
-
-### Router in Action
-![Router Decision](docs/screenshots/router_action.png)
-
----
-
-## Demo
-
-![App Demo](docs/demo.gif)
-
-*Upload a PDF → Ask a question → See streamed answer with verifiable citations → Ask follow-up questions*
 
 ---
 

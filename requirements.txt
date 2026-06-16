@@ -6,11 +6,8 @@ langchain-groq
 langgraph
 sentence-transformers
 rank-bm25
-ragas
-fastapi
-gradio
-uvicorn
 python-dotenv
 pydantic
 pandas
 httpx
+groq

@@ -152,25 +152,32 @@ class CitedRAGPipeline:
     def __init__(self, reranker, hybrid_retriever):
         self.reranker = reranker
         self.hybrid_retriever = hybrid_retriever
+        
+        # FIX 1: Alias the retriever so app.py can still call PIPELINE.retriever.refresh_bm25()
+        self.retriever = hybrid_retriever 
         self.llm = Groq(api_key=os.getenv("GROQ_API_KEY"))
+        
+        # FIX 2: Add the document filter state
+        self.current_source_filter = None
 
     def format_sources(self, chunks: list[dict]) -> str:
-        """Format retrieved chunks as numbered sources for the prompt."""
         sources = []
         for i, chunk in enumerate(chunks, 1):
             sources.append(f'Source [{i}]: "{chunk["text"]}"')
         return "\n\n".join(sources)
 
     def query(self, question: str) -> CitationResponse:
-        """Run the full cited RAG pipeline with verification."""
-        # Retrieve and rerank documents
-        raw_results = self.hybrid_retriever.retrieve(question, k=20)
+        
+        # FIX 3: Pass the active document filter into the retriever
+        raw_results = self.hybrid_retriever.retrieve(
+            question, 
+            k=20, 
+            source_filter=self.current_source_filter
+        )
+        
         reranked = self.reranker.rerank(question, raw_results, top_n=5)
-
-        # Format sources with numbered markers
         sources_text = self.format_sources(reranked)
 
-        # Instruct the LLM to cite sources inline
         prompt = (
             "Answer the question using ONLY the provided sources.\n"
             "For every factual claim, add an inline citation marker [N] "
@@ -188,20 +195,24 @@ class CitedRAGPipeline:
 
         answer_text = response.choices[0].message.content
 
-        # Extract citations and verify each one
         extracted = extract_citations(answer_text)
         citations = []
 
         for claim, idx in extracted:
             if 1 <= idx <= len(reranked):
                 chunk = reranked[idx - 1]
-                # Verify the source actually supports the claim
                 is_verified = verify_citation(
                     claim, chunk["text"], self.llm
                 )
+                
+                # FIX: Safely extract metadata regardless of chunk type
+                meta = chunk["metadata"]
+                page_val = meta.get("page", meta.get("page_num", 0))
+                source_val = meta.get("source", "Unknown")
+                
                 citations.append(Citation(
-                    source_doc=chunk["metadata"]["source"],
-                    page_number=chunk["metadata"]["page"],
+                    source_doc=str(source_val),
+                    page_number=int(page_val),
                     passage=chunk["text"],
                     verified=is_verified
                 ))

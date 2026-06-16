@@ -24,6 +24,12 @@ class HybridRetriever:
         """Rebuilds the BM25 index from the latest state of ChromaDB."""
         documents = self.load_documents_from_chroma()
         from langchain_community.retrievers import BM25Retriever as LangChainBM25
+        from langchain_core.documents import Document
+        
+        # FIX: Prevent crash when the database is completely empty on startup
+        if not documents:
+            documents = [Document(page_content="placeholder", metadata={"source": "none"})]
+            
         self.bm25_retriever = LangChainBM25.from_documents(documents)
         self.bm25_retriever.k = 5
 
