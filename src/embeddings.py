@@ -1,3 +1,5 @@
+import uuid
+
 from sentence_transformers import SentenceTransformer
 import chromadb
 
@@ -23,7 +25,11 @@ def generate_embeddings(texts):
 def store_chunks(chunks):
     texts = [chunk["text"] for chunk in chunks]
     metadatas = [chunk["metadata"] for chunk in chunks]
-    ids = [f"chunk_{i}" for i in range(len(chunks))]
+
+    ids = [
+        str(uuid.uuid4())
+        for _ in chunks
+    ]
     embeddings = generate_embeddings(texts)
 
     collection.upsert(

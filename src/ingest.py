@@ -42,42 +42,55 @@ def chunk_text(pages, chunk_size=512, overlap=50):
     
     return chunks
 
-def ingest_pdf(data_dir="data"):
-    """Load all PDFs and extract text, tables, and images."""
+def ingest_pdf(path="data"):
+    """Load PDFs from either a directory or a single PDF file."""
 
     all_chunks = []
 
-    for filename in os.listdir(data_dir):
+    # Single uploaded PDF
+    if os.path.isfile(path):
+
+        pages = load_pdf(path)
+
+        text_chunks = chunk_text(pages)
+
+        all_chunks.extend(text_chunks)
+
+        multimodal_chunks = extract_multimodal_content(path)
+
+        all_chunks.extend(multimodal_chunks)
+
+        print(
+            f"Ingested {len(all_chunks)} chunks from {path}"
+        )
+
+        return all_chunks
+
+    # Directory of PDFs
+    for filename in os.listdir(path):
 
         if not filename.endswith(".pdf"):
             continue
 
         file_path = os.path.join(
-            data_dir,
+            path,
             filename
         )
 
-        # text chunks
         pages = load_pdf(file_path)
 
         text_chunks = chunk_text(pages)
 
         all_chunks.extend(text_chunks)
 
-        # multimodal chunks
-        multimodal_chunks = (
-            extract_multimodal_content(
-                file_path
-            )
+        multimodal_chunks = extract_multimodal_content(
+            file_path
         )
 
-        all_chunks.extend(
-            multimodal_chunks
-        )
+        all_chunks.extend(multimodal_chunks)
 
     print(
-        f"Ingested {len(all_chunks)} chunks "
-        f"from {data_dir}"
+        f"Ingested {len(all_chunks)} chunks from {path}"
     )
 
     return all_chunks
