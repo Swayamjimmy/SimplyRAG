@@ -82,7 +82,7 @@ Answer:"""
 
         # Call Groq LLM
         response = self.llm_client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
+            model="openai/gpt-oss-120b",
             messages=[{"role": "user", "content": prompt}]
         )
         return {
@@ -136,7 +136,7 @@ Question: {question}
 Answer:"""
 
         response = self.llm_client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
+            model="openai/gpt-oss-120b",
             messages=[{"role": "user", "content": prompt}]
         )
 
@@ -188,7 +188,7 @@ class CitedRAGPipeline:
         )
 
         response = self.llm.chat.completions.create(
-            model="llama-3.3-70b-versatile",
+            model="openai/gpt-oss-120b",
             messages=[{"role": "user", "content": prompt}],
             temperature=0
         )
