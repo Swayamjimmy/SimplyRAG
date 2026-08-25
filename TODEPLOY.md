@@ -6,7 +6,7 @@ Here are the two commands to link it back up and push:
 Run this command, making sure to replace <YOUR_TOKEN> with your Hugging Face write token:
 
 Bash
-git remote add space https://swmi:<YOUR_TOKEN>@huggingface.co/spaces/swmi/SimplyRAG/
+git remote add space https://swmi:<Yhf_YHBQgVoMuQowbVVGlWopbVOPuNEWDjonpk>@huggingface.co/spaces/swmi/SimplyRAG/
 2. Force Push to Hugging Face
 Now that Git knows what space is again, run your push:
 
