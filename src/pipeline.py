@@ -47,7 +47,7 @@ Answer:"""
 
         # Call Groq LLM for generation
         response = self.client.chat.completions.create(
-            model="openai/gpt-oss-20b",
+            model="openai/gpt-oss-120b",
             messages=[{"role": "user", "content": prompt}],
             temperature=0.1
         )
