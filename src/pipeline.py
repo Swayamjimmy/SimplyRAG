@@ -438,7 +438,22 @@ class CitedRAGPipeline:
             prompt
         )
 
-        answer_text = response.content
+        content = response.content
+
+        # Gemini/LangChain may return content as either a plain
+        # string or a list of structured content blocks. Normalize
+        # it to a string before citation extraction.
+        if isinstance(content, str):
+            answer_text = content
+        elif isinstance(content, list):
+            answer_text = "\n".join(
+                item.get("text", "")
+                if isinstance(item, dict)
+                else str(item)
+                for item in content
+            )
+        else:
+            answer_text = str(content)
 
         # ----------------------------------------------------
         # Extract citations

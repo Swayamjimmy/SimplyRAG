@@ -48,6 +48,22 @@ def extract_citations(
             (claim_sentence, citation_index)
     """
 
+    # Gemini/LangChain may return response.content
+    # as a list of content blocks rather than a plain string.
+    if not isinstance(text, str):
+
+        if isinstance(text, list):
+
+            text = "\n".join(
+                item.get("text", "")
+                if isinstance(item, dict)
+                else str(item)
+                for item in text
+            )
+
+        else:
+            text = str(text)
+
     results = []
 
     # Split output into sentences.
