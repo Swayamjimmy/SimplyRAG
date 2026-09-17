@@ -8,7 +8,7 @@ from langgraph.graph import StateGraph, START, END
 from langgraph.graph.message import add_messages
 from langgraph.checkpoint.memory import MemorySaver
 
-from langchain_groq import ChatGroq
+from src.llm import llm
 from langchain_core.messages import HumanMessage, AIMessage
 
 from src.embeddings import get_collection
@@ -62,21 +62,6 @@ class RouteIntent(BaseModel):
         description="Intent classification"
     )
 
-
-# ============================================================
-# LLM
-# ============================================================
-
-llm = ChatGroq(
-    model="openai/gpt-oss-120b",
-    api_key=os.getenv("GROQ_API_KEY"),
-    temperature=0,
-)
-
-
-# ============================================================
-# CONVERSATION HELPER
-# ============================================================
 
 def build_conversational_query(messages):
     history = []

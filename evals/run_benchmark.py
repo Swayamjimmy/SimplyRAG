@@ -1,66 +1,287 @@
+# evals/run_benchmark.py
+
 import json
-import os
+
 from dotenv import load_dotenv
-from groq import Groq
+
 from src.ingest import ingest_pdf
-from src.embeddings import get_collection, get_embedding_function, store_chunks
-from src.retriever import BasicRetriever
-from src.pipeline import BasicRAGPipeline, HybridRAGPipeline
+from src.embeddings import (
+    get_collection,
+    get_embedding_function,
+    store_chunks,
+)
+
+from src.pipeline import (
+    BasicRAGPipeline,
+    HybridRAGPipeline,
+)
+
+
+# ============================================================
+# Environment
+# ============================================================
 
 load_dotenv()
 
-# Initialize shared resources
-chunks = ingest_pdf("data/")
-store_chunks(chunks)
+
+# ============================================================
+# Initialize Shared Resources
+# ============================================================
+
+print(
+    "Loading documents..."
+)
+
+chunks = ingest_pdf(
+    "data/"
+)
+
+
+print(
+    f"Loaded {len(chunks)} chunks."
+)
+
+
+store_chunks(
+    chunks
+)
+
+
 collection = get_collection()
-embedding_function = get_embedding_function()
-client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
-# Load test set
-with open("evals/test_set.json", "r") as f:
-    test_set = json.load(f)
 
-# Run basic RAG pipeline
-print("Running BasicRAGPipeline...")
-basic_pipeline = BasicRAGPipeline()
+embedding_function = (
+    get_embedding_function()
+)
+
+
+# ============================================================
+# Load Test Set
+# ============================================================
+
+with open(
+    "evals/test_set.json",
+    "r"
+) as f:
+
+    test_set = json.load(
+        f
+    )
+
+
+print(
+    f"Loaded {len(test_set)} benchmark questions."
+)
+
+
+# ============================================================
+# Basic RAG Benchmark
+# ============================================================
+
+print(
+    "\n" + "=" * 60
+)
+
+print(
+    "Running BasicRAGPipeline..."
+)
+
+print(
+    "=" * 60
+)
+
+
+basic_pipeline = (
+    BasicRAGPipeline()
+)
+
+
 basic_results = []
+
+
 for item in test_set:
-    result = basic_pipeline.query(item["question"])
-    if isinstance(result, dict):
-        answer = result.get("answer")
-        retrieved_chunks = result.get("retrieved_chunks", [])
-    else:
-        answer = result
-        retrieved_chunks = basic_pipeline.retriever.retrieve(item["question"])
 
-    basic_results.append({
-        "question": item["question"],
-        "answer": answer,
-        "retrieved_chunks": [c["text"][:200] for c in retrieved_chunks]
-    })
-    print(f"  Done: {item['question'][:50]}...")
+    question = item[
+        "question"
+    ]
 
-# Save basic results
-with open("evals/results_basic.json", "w") as f:
-    json.dump(basic_results, f, indent=2)
-print("Saved evals/results_basic.json")
+    result = (
+        basic_pipeline.query(
+            question
+        )
+    )
 
-# Run hybrid RAG pipeline
-print("\nRunning HybridRAGPipeline...")
-hybrid_pipeline = HybridRAGPipeline(chunks, collection, embedding_function, client)
+    # Current BasicRAGPipeline returns
+    # a dictionary.
+    answer = result.get(
+        "answer",
+        ""
+    )
+
+    retrieved_chunks = result.get(
+        "retrieved_chunks",
+        []
+    )
+
+    basic_results.append(
+        {
+            "question": question,
+
+            "answer": answer,
+
+            "retrieved_chunks": [
+                {
+                    "text": chunk.get(
+                        "text",
+                        ""
+                    ),
+                    "metadata": chunk.get(
+                        "metadata",
+                        {}
+                    ),
+                }
+                for chunk in retrieved_chunks
+            ],
+        }
+    )
+
+    print(
+        f"  Done: {question[:70]}..."
+    )
+
+
+# ============================================================
+# Save Basic Results
+# ============================================================
+
+with open(
+    "evals/results_basic.json",
+    "w"
+) as f:
+
+    json.dump(
+        basic_results,
+        f,
+        indent=2
+    )
+
+
+print(
+    "Saved evals/results_basic.json"
+)
+
+
+# ============================================================
+# Hybrid RAG Benchmark
+# ============================================================
+
+print(
+    "\n" + "=" * 60
+)
+
+print(
+    "Running HybridRAGPipeline..."
+)
+
+print(
+    "=" * 60
+)
+
+
+hybrid_pipeline = (
+    HybridRAGPipeline(
+        chunks,
+        collection,
+        embedding_function,
+    )
+)
+
+
 hybrid_results = []
+
+
 for item in test_set:
-    result = hybrid_pipeline.query(item["question"])
-    hybrid_results.append({
-        "question": item["question"],
-        "answer": result["answer"],
-        "retrieved_chunks": [c["text"][:200] for c in result["retrieved_chunks"]]
-    })
-    print(f"  Done: {item['question'][:50]}...")
 
-# Save hybrid results
-with open("evals/results_hybrid.json", "w") as f:
-    json.dump(hybrid_results, f, indent=2)
-print("Saved evals/results_hybrid.json")
+    question = item[
+        "question"
+    ]
 
-print("\nBenchmark complete! Results saved to evals/ directory.")
+    result = (
+        hybrid_pipeline.query(
+            question
+        )
+    )
+
+    hybrid_results.append(
+        {
+            "question": question,
+
+            "answer": result.get(
+                "answer",
+                ""
+            ),
+
+            "retrieved_chunks": [
+                {
+                    "text": chunk.get(
+                        "text",
+                        ""
+                    ),
+                    "metadata": chunk.get(
+                        "metadata",
+                        {}
+                    ),
+                }
+                for chunk in result.get(
+                    "retrieved_chunks",
+                    []
+                )
+            ],
+        }
+    )
+
+    print(
+        f"  Done: {question[:70]}..."
+    )
+
+
+# ============================================================
+# Save Hybrid Results
+# ============================================================
+
+with open(
+    "evals/results_hybrid.json",
+    "w"
+) as f:
+
+    json.dump(
+        hybrid_results,
+        f,
+        indent=2
+    )
+
+
+print(
+    "Saved evals/results_hybrid.json"
+)
+
+
+# ============================================================
+# Benchmark Complete
+# ============================================================
+
+print(
+    "\n" + "=" * 60
+)
+
+print(
+    "Benchmark complete!"
+)
+
+print(
+    "=" * 60
+)
+
+print(
+    "Results saved to evals/"
+)

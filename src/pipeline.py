@@ -1,220 +1,509 @@
+# src/pipeline.py
+
 import os
+
 from dotenv import load_dotenv
-from groq import Groq
+from langchain_google_genai import ChatGoogleGenerativeAI
+
 from src.retriever import BasicRetriever
 from src.hybrid_retriever import HybridRetriever
 from src.reranker import CrossEncoderReranker
 from src.ingest import ingest_pdf
 from src.embeddings import get_collection, get_embedding_function
+
 from src.citations import (
-    Citation, CitationResponse, extract_citations,
-    verify_citation, compute_citation_accuracy
+    Citation,
+    CitationResponse,
+    extract_citations,
+    verify_citation,
+    compute_citation_accuracy,
 )
+
 
 load_dotenv()
 
+
+# ============================================================
+# Gemini Configuration
+# ============================================================
+
+GEMINI_MODEL = os.getenv(
+    "GEMINI_MODEL",
+    "gemini-3.8-flash"
+)
+
+
+def get_gemini_llm():
+    """
+    Create a Gemini chat model for text generation.
+
+    GEMINI_API_KEY must be present in the environment.
+    """
+
+    api_key = os.getenv("GEMINI_API_KEY")
+
+    if not api_key:
+        raise ValueError(
+            "GEMINI_API_KEY is not set. "
+            "Add it to your .env file or deployment secrets."
+        )
+
+    return ChatGoogleGenerativeAI(
+        model=GEMINI_MODEL,
+        google_api_key=api_key,
+        temperature=0,
+        max_retries=2,
+    )
+
+
+# Shared Gemini instance for this module.
+gemini_llm = get_gemini_llm()
+
+
+# ============================================================
+# Basic RAG
+# ============================================================
+
 class BasicRAGPipeline:
-    """Full retrieval chain: query -> retrieve -> format prompt -> call Groq -> answer."""
+    """
+    Basic RAG pipeline:
+
+        Query
+          ↓
+        Vector Retrieval
+          ↓
+        Context Formatting
+          ↓
+        Gemini
+          ↓
+        Answer
+    """
 
     def __init__(self):
         self.retriever = BasicRetriever(top_k=5)
-        self.client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+        self.llm = gemini_llm
 
     def format_prompt(self, question, context_chunks):
-        """Build a prompt that grounds the LLM in retrieved context."""
+        """
+        Build a grounded prompt using retrieved context.
+        """
+
         context = "\n\n".join(
-            [f"Source: {chunk['metadata']['source']}, Page {chunk['metadata']['page']}\n{chunk['text']}"
-             for chunk in context_chunks]
+            [
+                (
+                    f"Source: {chunk['metadata'].get('source', 'Unknown')}, "
+                    f"Page: {chunk['metadata'].get('page', chunk['metadata'].get('page_num', 0))}\n"
+                    f"{chunk['text']}"
+                )
+                for chunk in context_chunks
+            ]
         )
-        prompt = f"""Answer the following question based ONLY on the provided context.
-If the context doesn't contain enough information, say so.
+
+        prompt = f"""
+Answer the following question based ONLY on the provided context.
+
+If the context does not contain enough information to answer the
+question, clearly say that the information is not available in
+the provided context.
 
 Context:
 {context}
 
-Question: {question}
+Question:
+{question}
 
-Answer:"""
-        return prompt
+Answer:
+"""
+
+        return prompt.strip()
 
     def query(self, question):
-        """Run the full RAG pipeline: retrieve, format, generate."""
-        # Retrieve relevant chunks from ChromaDB
+        """
+        Run the full basic RAG pipeline.
+        """
+
         chunks = self.retriever.retrieve(question)
 
-        # Format the prompt with retrieved context
-        prompt = self.format_prompt(question, chunks)
-
-        # Call Groq LLM for generation
-        response = self.client.chat.completions.create(
-            model="openai/gpt-oss-120b",
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.1
+        prompt = self.format_prompt(
+            question,
+            chunks
         )
-        return response.choices[0].message.content
+
+        response = self.llm.invoke(prompt)
+
+        return {
+            "answer": response.content,
+            "retrieved_chunks": chunks,
+        }
+
+
+# ============================================================
+# Hybrid RAG
+# ============================================================
 
 class HybridRAGPipeline:
-    """RAG pipeline using hybrid BM25 + vector retrieval."""
+    """
+    RAG pipeline using:
 
-    def __init__(self, chunks, chroma_collection, embedding_function, llm_client):
-        # Initialize hybrid retriever with both BM25 and vector search
-        self.retriever = HybridRetriever(chunks, chroma_collection, embedding_function)
-        self.llm_client = llm_client
+        BM25
+          +
+        Vector Search
+          ↓
+        Hybrid Retrieval
+          ↓
+        Gemini
+          ↓
+        Answer
+    """
+
+    def __init__(
+        self,
+        chunks,
+        chroma_collection,
+        embedding_function,
+        llm_client=None,
+    ):
+        self.retriever = HybridRetriever(
+            chunks,
+            chroma_collection,
+            embedding_function
+        )
+
+        # Keep the optional llm_client argument for backward
+        # compatibility with existing benchmark/test code.
+        self.llm = llm_client or gemini_llm
 
     def query(self, question):
-        """Retrieve relevant chunks with hybrid search, then generate answer."""
-        # Get top-k chunks using hybrid retrieval
-        retrieved = self.retriever.retrieve(question, k=5)
+        """
+        Retrieve relevant chunks with hybrid search,
+        then generate an answer with Gemini.
+        """
 
-        # Format context from retrieved chunks
-        context = "\n\n".join([chunk["text"] for chunk in retrieved])
+        retrieved = self.retriever.retrieve(
+            question,
+            k=5
+        )
 
-        # Build grounded prompt
-        prompt = f"""Answer the following question based ONLY on the provided context.
-If the context does not contain enough information, say so.
+        context = "\n\n".join(
+            [
+                chunk["text"]
+                for chunk in retrieved
+            ]
+        )
+
+        prompt = f"""
+Answer the following question based ONLY on the provided context.
+
+If the context does not contain enough information to answer the
+question, clearly say that the information is not available in
+the provided context.
 
 Context:
 {context}
 
-Question: {question}
+Question:
+{question}
 
-Answer:"""
+Answer:
+"""
 
-        # Call Groq LLM
-        response = self.llm_client.chat.completions.create(
-            model="openai/gpt-oss-120b",
-            messages=[{"role": "user", "content": prompt}]
+        response = self.llm.invoke(
+            prompt.strip()
         )
+
         return {
-            "answer": response.choices[0].message.content,
-            "retrieved_chunks": retrieved
+            "answer": response.content,
+            "retrieved_chunks": retrieved,
         }
 
 
-# ... existing classes (BasicRAGPipeline, HybridRAGPipeline) ...
+# ============================================================
+# Hybrid + Reranking RAG
+# ============================================================
 
 class RerankedRAGPipeline:
-    """RAG pipeline with hybrid search and cross-encoder reranking."""
+    """
+    RAG pipeline using:
+
+        BM25 + Vector Retrieval
+                ↓
+           Top 20 candidates
+                ↓
+        Cross-Encoder Reranking
+                ↓
+            Top 5 chunks
+                ↓
+             Gemini
+                ↓
+             Answer
+    """
 
     def __init__(self):
+
+        # Ingest/load existing documents.
         chunks = ingest_pdf("data/")
+
         chroma_collection = get_collection()
+
         embedding_function = get_embedding_function()
 
-        self.retriever = HybridRetriever(chunks, chroma_collection, embedding_function)
+        self.retriever = HybridRetriever(
+            chunks,
+            chroma_collection,
+            embedding_function
+        )
+
         self.reranker = CrossEncoderReranker()
-        self.llm_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
-        
-        # State variable to hold the active document filter
+
+        self.llm = gemini_llm
+
+        # Active document filter.
         self.current_source_filter = None
 
     def query(self, question):
-        """Retrieve top-20, rerank to top-5, then generate answer."""
-        
-        # Pass the active filter down to the retriever
+        """
+        Retrieve top-20 candidates,
+        rerank to top-5,
+        generate grounded answer.
+        """
+
         candidates = self.retriever.retrieve(
-            question, 
-            k=20, 
+            question,
+            k=20,
             source_filter=self.current_source_filter
         )
 
-        # Rerank: score each candidate against the query, keep top-5
-        top_docs = self.reranker.rerank(question, candidates, top_n=5)
+        top_docs = self.reranker.rerank(
+            question,
+            candidates,
+            top_n=5
+        )
 
-        # Format context from reranked documents
-        context = "\n\n".join([doc["text"] for doc in top_docs])
+        context = "\n\n".join(
+            [
+                doc["text"]
+                for doc in top_docs
+            ]
+        )
 
-        # Generate answer using Groq LLM
-        prompt = f"""Answer the following question based ONLY on the provided context.
-If the context does not contain enough information, say so.
+        prompt = f"""
+Answer the following question based ONLY on the provided context.
+
+If the context does not contain enough information to answer the
+question, clearly say that the information is not available in
+the provided context.
 
 Context:
 {context}
 
-Question: {question}
+Question:
+{question}
 
-Answer:"""
+Answer:
+"""
 
-        response = self.llm_client.chat.completions.create(
-            model="openai/gpt-oss-120b",
-            messages=[{"role": "user", "content": prompt}]
+        response = self.llm.invoke(
+            prompt.strip()
         )
 
-        # The crucial return statement that ensures the Agent gets its data back!
         return {
-            "answer": response.choices[0].message.content,
-            "sources": top_docs
+            "answer": response.content,
+            "sources": top_docs,
         }
-    
-class CitedRAGPipeline:
-    """RAG pipeline with inline citation grounding and verification."""
 
-    def __init__(self, reranker, hybrid_retriever):
+
+# ============================================================
+# Cited RAG
+# ============================================================
+
+class CitedRAGPipeline:
+    """
+    RAG pipeline with:
+
+        Hybrid Retrieval
+              ↓
+        Cross-Encoder Reranking
+              ↓
+          Gemini Generation
+              ↓
+        Inline [N] citations
+              ↓
+        Citation Verification
+    """
+
+    def __init__(
+        self,
+        reranker,
+        hybrid_retriever
+    ):
+
         self.reranker = reranker
+
         self.hybrid_retriever = hybrid_retriever
-        
-        # FIX 1: Alias the retriever so app.py can still call PIPELINE.retriever.refresh_bm25()
-        self.retriever = hybrid_retriever 
-        self.llm = Groq(api_key=os.getenv("GROQ_API_KEY"))
-        
-        # FIX 2: Add the document filter state
+
+        # Keep this alias because app.py may access
+        # PIPELINE.retriever.refresh_bm25().
+        self.retriever = hybrid_retriever
+
+        self.llm = gemini_llm
+
         self.current_source_filter = None
 
-    def format_sources(self, chunks: list[dict]) -> str:
-        sources = []
-        for i, chunk in enumerate(chunks, 1):
-            sources.append(f'Source [{i}]: "{chunk["text"]}"')
-        return "\n\n".join(sources)
+    def format_sources(
+        self,
+        chunks: list[dict]
+    ) -> str:
+        """
+        Convert retrieved chunks into numbered sources
+        that Gemini can reference with [N].
+        """
 
-    def query(self, question: str) -> CitationResponse:
-        
-        # FIX 3: Pass the active document filter into the retriever
+        sources = []
+
+        for i, chunk in enumerate(
+            chunks,
+            start=1
+        ):
+            sources.append(
+                f'Source [{i}]: "{chunk["text"]}"'
+            )
+
+        return "\n\n".join(
+            sources
+        )
+
+    def query(
+        self,
+        question: str
+    ) -> CitationResponse:
+        """
+        Run cited RAG.
+
+        Every factual claim should contain [N],
+        where N corresponds to the retrieved source.
+        """
+
+        # ----------------------------------------------------
+        # Hybrid retrieval
+        # ----------------------------------------------------
+
         raw_results = self.hybrid_retriever.retrieve(
-            question, 
-            k=20, 
+            question,
+            k=20,
             source_filter=self.current_source_filter
         )
-        
-        reranked = self.reranker.rerank(question, raw_results, top_n=5)
-        sources_text = self.format_sources(reranked)
+
+        # ----------------------------------------------------
+        # Cross-encoder reranking
+        # ----------------------------------------------------
+
+        reranked = self.reranker.rerank(
+            question,
+            raw_results,
+            top_n=5
+        )
+
+        # ----------------------------------------------------
+        # Format sources
+        # ----------------------------------------------------
+
+        sources_text = self.format_sources(
+            reranked
+        )
+
+        # ----------------------------------------------------
+        # Gemini prompt
+        # ----------------------------------------------------
 
         prompt = (
-            "Answer the question using ONLY the provided sources.\n"
-            "For every factual claim, add an inline citation marker [N] "
-            "referencing the source number.\n\n"
+            "Answer the question using ONLY the provided sources.\n\n"
+
+            "Citation rules:\n"
+            "1. Every factual claim must have an inline citation "
+            "marker such as [1] or [2].\n"
+            "2. The citation number must correspond to the source "
+            "number provided below.\n"
+            "3. Do not invent source numbers.\n"
+            "4. If the sources do not contain enough information, "
+            "say so instead of guessing.\n\n"
+
             f"Sources:\n{sources_text}\n\n"
-            f"Question: {question}\n\n"
+
+            f"Question:\n{question}\n\n"
+
             "Answer with inline citations:"
         )
 
-        response = self.llm.chat.completions.create(
-            model="openai/gpt-oss-120b",
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0
+        response = self.llm.invoke(
+            prompt
         )
 
-        answer_text = response.choices[0].message.content
+        answer_text = response.content
 
-        extracted = extract_citations(answer_text)
+        # ----------------------------------------------------
+        # Extract citations
+        # ----------------------------------------------------
+
+        extracted = extract_citations(
+            answer_text
+        )
+
         citations = []
 
-        for claim, idx in extracted:
-            if 1 <= idx <= len(reranked):
-                chunk = reranked[idx - 1]
-                is_verified = verify_citation(
-                    claim, chunk["text"], self.llm
-                )
-                
-                # FIX: Safely extract metadata regardless of chunk type
-                meta = chunk["metadata"]
-                page_val = meta.get("page", meta.get("page_num", 0))
-                source_val = meta.get("source", "Unknown")
-                
-                citations.append(Citation(
-                    source_doc=str(source_val),
-                    page_number=int(page_val),
-                    passage=chunk["text"],
-                    verified=is_verified
-                ))
+        # ----------------------------------------------------
+        # Verify citations
+        # ----------------------------------------------------
 
-        return CitationResponse(answer=answer_text, citations=citations)
+        for claim, idx in extracted:
+
+            if 1 <= idx <= len(reranked):
+
+                chunk = reranked[
+                    idx - 1
+                ]
+
+                is_verified = verify_citation(
+                    claim,
+                    chunk["text"],
+                    self.llm
+                )
+
+                # Safely extract metadata regardless
+                # of whether the chunk came from normal
+                # text, image or table processing.
+
+                meta = chunk.get(
+                    "metadata",
+                    {}
+                )
+
+                page_val = meta.get(
+                    "page",
+                    meta.get(
+                        "page_num",
+                        0
+                    )
+                )
+
+                source_val = meta.get(
+                    "source",
+                    "Unknown"
+                )
+
+                citations.append(
+                    Citation(
+                        source_doc=str(
+                            source_val
+                        ),
+                        page_number=int(
+                            page_val
+                        ),
+                        passage=chunk["text"],
+                        verified=is_verified,
+                    )
+                )
+
+        return CitationResponse(
+            answer=answer_text,
+            citations=citations,
+        )
