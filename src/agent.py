@@ -8,31 +8,37 @@ from langgraph.graph import StateGraph, START, END
 from langgraph.graph.message import add_messages
 from langgraph.checkpoint.memory import MemorySaver
 
-from langchain_groq import ChatGroq
-from src.embeddings import get_collection
+from src.llm import llm
 from langchain_core.messages import HumanMessage, AIMessage
 
+from src.embeddings import get_collection
 from src.pipeline import RerankedRAGPipeline, CitedRAGPipeline
 
-# ... (keep other imports) ...
 
-# Bootstrap the base pipeline to initialize the database and models
+# Load environment variables
+load_dotenv()
+
+
+# ============================================================
+# INITIALIZE RAG PIPELINE
+# ============================================================
+
+# Bootstrap the base pipeline
 BASE_PIPELINE = RerankedRAGPipeline()
 
-# FIX 4: Wrap the base components inside your Cited pipeline
+# Wrap the base components inside the cited pipeline
 PIPELINE = CitedRAGPipeline(
     reranker=BASE_PIPELINE.reranker,
     hybrid_retriever=BASE_PIPELINE.retriever
 )
+
+# Load Chroma collection
 collection = get_collection()
 
-# ... (keep AgentState, router, etc.) ...
 
-load_dotenv()
-
-# Load once
-collection = get_collection()
-
+# ============================================================
+# AGENT STATE
+# ============================================================
 
 class AgentState(TypedDict):
     messages: Annotated[list, add_messages]
@@ -41,6 +47,10 @@ class AgentState(TypedDict):
     citations: list
     current_document_context: str
 
+
+# ============================================================
+# ROUTER OUTPUT SCHEMA
+# ============================================================
 
 class RouteIntent(BaseModel):
     intent: Literal[
@@ -51,13 +61,6 @@ class RouteIntent(BaseModel):
     ] = Field(
         description="Intent classification"
     )
-
-
-llm = ChatGroq(
-    model="llama-3.3-70b-versatile",
-    api_key=os.getenv("GROQ_API_KEY"),
-    temperature=0,
-)
 
 
 def build_conversational_query(messages):
@@ -78,30 +81,59 @@ def build_conversational_query(messages):
     return "\n".join(history)
 
 
+# ============================================================
+# ROUTER
+# ============================================================
+
 def router(state: AgentState):
 
     question = build_conversational_query(
         state["messages"]
     )
 
+    # IMPORTANT:
+    # Use JSON mode instead of tool/function calling.
     structured_llm = llm.with_structured_output(
-        RouteIntent
+        RouteIntent,
+        method="json_mode"
     )
 
     prompt = f"""
-Classify the following conversation into exactly one intent.
+You are an intent classifier.
+
+Classify the following conversation into exactly ONE of these intents:
+
+- retrieval
+- summarization
+- comparison
+- table_analysis
+
+Definitions:
 
 retrieval:
-    factual lookup
+Use when the user is asking for factual information,
+explanations, concepts, definitions, or information that
+should be retrieved from the document knowledge base.
 
 summarization:
-    summarize content
+Use when the user explicitly asks to summarize content,
+a document, paper, section, or information.
 
 comparison:
-    compare concepts, methods, models or papers
+Use when the user asks to compare concepts, methods,
+models, approaches, techniques, or papers.
 
 table_analysis:
-    analyze metrics, statistics or tables
+Use when the user asks about metrics, statistics,
+tables, figures, charts, or numerical comparisons.
+
+Return ONLY valid JSON.
+
+Required format:
+
+{{
+    "intent": "retrieval"
+}}
 
 Conversation:
 
@@ -115,27 +147,33 @@ Conversation:
     }
 
 
+# ============================================================
+# RAG PIPELINE
+# ============================================================
+
 def run_rag(query: str):
     return PIPELINE.query(query)
-
-
 
 
 def handle_query(
     state: AgentState,
     instruction: str = ""
 ):
+
     latest_question = state["messages"][-1].content
 
-    # Only pass the raw question to the retriever
+    # Only pass the raw/latest question to the retriever
     search_query = latest_question
-    if instruction:
-        search_query = f"{latest_question} {instruction}"
 
-    # Run the Cited RAG pipeline
+    if instruction:
+        search_query = (
+            f"{latest_question} {instruction}"
+        )
+
+    # Run the cited RAG pipeline
     result = run_rag(search_query)
 
-    # FIX 5: Convert the Pydantic Citation objects into dictionaries for Gradio
+    # Convert Pydantic Citation objects to dictionaries
     citations_dicts = [
         {
             "source": c.source_doc,
@@ -147,9 +185,9 @@ def handle_query(
     ]
 
     return {
-        "retrieved_documents": citations_dicts,  # Keeps the grader node happy
+        "retrieved_documents": citations_dicts,
         "current_document_context": result.answer,
-        "citations": citations_dicts,            # Sends data to the UI!
+        "citations": citations_dicts,
         "messages": [
             AIMessage(
                 content=result.answer
@@ -158,18 +196,32 @@ def handle_query(
     }
 
 
+# ============================================================
+# RETRIEVAL NODE
+# ============================================================
+
 def retrieval_node(state: AgentState):
     return handle_query(state)
 
 
+# ============================================================
+# SUMMARIZATION NODE
+# ============================================================
+
 def summarization_node(state: AgentState):
+
     return handle_query(
         state,
         instruction="Provide a detailed summary."
     )
 
 
+# ============================================================
+# COMPARISON NODE
+# ============================================================
+
 def comparison_node(state: AgentState):
+
     return handle_query(
         state,
         instruction=(
@@ -178,6 +230,10 @@ def comparison_node(state: AgentState):
         ),
     )
 
+
+# ============================================================
+# TABLE ANALYSIS NODE
+# ============================================================
 
 def table_analysis_node(state: AgentState):
 
@@ -203,9 +259,11 @@ def table_analysis_node(state: AgentState):
 Analyze the following tables, figures and numerical data.
 
 Question:
+
 {query}
 
 Context:
+
 {context}
 """
 
@@ -214,11 +272,18 @@ Context:
     return {
         "retrieved_documents": docs,
         "current_document_context": response.content,
+        "citations": [],
         "messages": [
-            AIMessage(content=response.content)
+            AIMessage(
+                content=response.content
+            )
         ]
     }
 
+
+# ============================================================
+# DOCUMENT GRADER
+# ============================================================
 
 def grade_documents(
     state: AgentState,
@@ -235,6 +300,10 @@ def grade_documents(
     return "generate"
 
 
+# ============================================================
+# QUERY REWRITER
+# ============================================================
+
 def rewrite_question(state: AgentState):
 
     query = build_conversational_query(
@@ -242,7 +311,10 @@ def rewrite_question(state: AgentState):
     )
 
     prompt = f"""
-Rewrite this query to improve retrieval quality.
+Rewrite the following user query to improve
+document retrieval quality.
+
+Return only the rewritten query.
 
 Conversation:
 
@@ -260,15 +332,24 @@ Conversation:
     }
 
 
+# ============================================================
+# ROUTING FUNCTION
+# ============================================================
+
 def route_to_handler(
     state: AgentState,
 ):
     return state["intent"]
 
 
+# ============================================================
+# BUILD LANGGRAPH
+# ============================================================
+
 workflow = StateGraph(
     AgentState
 )
+
 
 workflow.add_node(
     "router",
@@ -300,11 +381,15 @@ workflow.add_node(
     rewrite_question,
 )
 
+
+# Start with router
 workflow.add_edge(
     START,
     "router",
 )
 
+
+# Route based on detected intent
 workflow.add_conditional_edges(
     "router",
     route_to_handler,
@@ -316,6 +401,8 @@ workflow.add_conditional_edges(
     },
 )
 
+
+# Retrieval flow
 workflow.add_conditional_edges(
     "retrieval",
     grade_documents,
@@ -325,6 +412,8 @@ workflow.add_conditional_edges(
     },
 )
 
+
+# Summarization flow
 workflow.add_conditional_edges(
     "summarization",
     grade_documents,
@@ -334,6 +423,8 @@ workflow.add_conditional_edges(
     },
 )
 
+
+# Comparison flow
 workflow.add_conditional_edges(
     "comparison",
     grade_documents,
@@ -343,6 +434,8 @@ workflow.add_conditional_edges(
     },
 )
 
+
+# Table analysis flow
 workflow.add_conditional_edges(
     "table_analysis",
     grade_documents,
@@ -352,17 +445,30 @@ workflow.add_conditional_edges(
     },
 )
 
+
+# Retry retrieval with rewritten query
 workflow.add_edge(
     "rewrite_question",
     "router",
 )
 
+
+# ============================================================
+# MEMORY
+# ============================================================
+
 memory = MemorySaver()
 
+
+# Compile graph
 graph = workflow.compile(
     checkpointer=memory
 )
 
+
+# ============================================================
+# STREAM QUERY
+# ============================================================
 
 def stream_query(
     question: str,
@@ -402,12 +508,17 @@ def stream_query(
                     hasattr(latest, "content")
                     and latest.content
                 ):
-                    print(
-                        "\nAssistant:"
-                    )
+
+                    print("\nAssistant:")
+
                     print(
                         latest.content
                     )
+
+
+# ============================================================
+# EXPORT GRAPH
+# ============================================================
 
 def build_graph():
     return graph

@@ -162,7 +162,7 @@ The system processes documents through three stages:
 | Hybrid + Reranking | ~2.4s |
 | Agentic (Full System) | ~3.1s |
 
-*Measured on Groq API with llama-3.3-70b-versatile. Streaming provides first-token latency of ~0.3s.*
+*Measured on Groq API with openai/gpt-oss-120b. Streaming provides first-token latency of ~0.3s.*
 
 ---
 

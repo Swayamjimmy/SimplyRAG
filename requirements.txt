@@ -2,7 +2,7 @@ pymupdf
 chromadb
 langchain
 langchain-community
-langchain-groq
+langchain-google-genai
 langgraph
 sentence-transformers
 rank-bm25
@@ -10,4 +10,4 @@ python-dotenv
 pydantic
 pandas
 httpx
-groq
+google-genai
