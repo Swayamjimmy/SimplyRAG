@@ -1,3 +1,4 @@
+
 # src/citations.py
 
 import re
@@ -51,16 +52,13 @@ def extract_citations(
     # Gemini/LangChain may return response.content
     # as a list of content blocks rather than a plain string.
     if not isinstance(text, str):
-
         if isinstance(text, list):
-
             text = "\n".join(
                 item.get("text", "")
                 if isinstance(item, dict)
                 else str(item)
                 for item in text
             )
-
         else:
             text = str(text)
 
@@ -68,25 +66,22 @@ def extract_citations(
 
     # Split output into sentences.
     sentences = re.split(
-        r'(?<=[.!?])\s+',
+        r"(?<=[.!?])\s+",
         text
     )
 
     for sentence in sentences:
-
-        # Find all citation markers.
+        # Find all citation markers such as [1], [2], [15].
         markers = re.findall(
-            r'\[(\d+)\]',
+            r"\[(\d+)\]",
             sentence
         )
 
         for marker in markers:
-
-            # Remove citation markers
-            # to obtain the clean claim.
+            # Remove citation markers to obtain the clean claim.
             claim = re.sub(
-                r'\[\d+\]',
-                '',
+                r"\[\d+\]",
+                "",
                 sentence
             ).strip()
 
@@ -98,6 +93,49 @@ def extract_citations(
             )
 
     return results
+
+
+# ============================================================
+# LLM Content Normalization
+# ============================================================
+
+def _extract_response_text(content) -> str:
+    """
+    Convert different LangChain/Gemini response.content
+    formats into a plain string.
+
+    Gemini/LangChain can return content as:
+        - str
+        - list[str]
+        - list[dict]
+        - other provider-specific formats
+    """
+
+    if isinstance(content, str):
+        return content
+
+    if isinstance(content, list):
+        parts = []
+
+        for item in content:
+            if isinstance(item, str):
+                parts.append(item)
+
+            elif isinstance(item, dict):
+                # Common Gemini/LangChain content-block format.
+                if "text" in item:
+                    parts.append(str(item["text"]))
+
+                # Handle nested text structures if present.
+                elif "content" in item:
+                    parts.append(str(item["content"]))
+
+            else:
+                parts.append(str(item))
+
+        return "".join(parts)
+
+    return str(content)
 
 
 # ============================================================
@@ -123,16 +161,20 @@ def verify_citation(
 Determine whether the following source passage supports the claim.
 
 Claim:
+
 {claim}
 
 Source passage:
+
 {passage}
 
 Question:
+
 Does the source passage provide evidence that supports
 the claim?
 
 Answer with ONLY one word:
+
 yes
 or
 no
@@ -142,7 +184,11 @@ no
         verification_prompt.strip()
     )
 
-    answer = response.content.strip().lower()
+    # Gemini/LangChain may return response.content
+    # as a string OR a list of content blocks.
+    answer = _extract_response_text(
+        response.content
+    ).strip().lower()
 
     # Normalize possible punctuation/formatting.
     answer = re.sub(
