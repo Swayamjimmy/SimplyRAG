@@ -72,29 +72,22 @@ def ingest_pdf(path="data"):
         return all_chunks
 
     for filename in os.listdir(path):
-
         if not filename.endswith(".pdf"):
             continue
 
-        file_path = os.path.join(
-            path,
-            filename
-        )
+        file_path = os.path.join(path, filename)
 
-        pages = load_pdf(file_path)
+        try:
+            pages = load_pdf(file_path)
+            text_chunks = chunk_text(pages)
+            all_chunks.extend(text_chunks)
 
-        text_chunks = chunk_text(pages)
+            multimodal_chunks = extract_multimodal_content(file_path)
+            all_chunks.extend(multimodal_chunks)
+            
+        except Exception as e:
+            print(f"Skipping corrupted or invalid file '{filename}': {e}")
+            continue
 
-        all_chunks.extend(text_chunks)
-
-        multimodal_chunks = extract_multimodal_content(
-            file_path
-        )
-
-        all_chunks.extend(multimodal_chunks)
-
-    print(
-        f"Ingested {len(all_chunks)} chunks from {path}"
-    )
-
+    print(f"Ingested {len(all_chunks)} chunks from {path}")
     return all_chunks

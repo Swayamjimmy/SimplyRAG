@@ -15,12 +15,11 @@ graph = build_graph()
 
 # Intent emoji mapping for router decisions
 INTENT_EMOJIS = {
-    "retrieval": "\U0001F50D",      # magnifying glass
-    "summarization": "\U0001F4DD",  # memo
-    "comparison": "\u2696\uFE0F",    # balance scale
-    "table_analysis": "\U0001F4CA"  # bar chart
+    "retrieval": "🔍",
+    "summarization": "📝",
+    "comparison": "⚖️",
+    "table_analysis": "📊"
 }
-
 
 def process_upload(file):
     if file is None:
@@ -32,7 +31,7 @@ def process_upload(file):
     # Extract the exact filename (e.g., 'resume.pdf')
     filename = file.split('/')[-1]
 
-    # FIX: Lock the global pipeline to ONLY search the new file
+    # Lock the global pipeline to ONLY search the new file
     from src.agent import PIPELINE
     PIPELINE.current_source_filter = filename
     PIPELINE.retriever.refresh_bm25()
@@ -41,6 +40,22 @@ def process_upload(file):
         f"Indexed {len(chunks)} chunks from {filename}. "
         f"The agent is now focused ONLY on this document."
     )
+
+def _extract_text(content) -> str:
+    """Helper to ensure we always append strings, not lists/dicts from LangChain."""
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        parts = []
+        for item in content:
+            if isinstance(item, str):
+                parts.append(item)
+            elif isinstance(item, dict):
+                parts.append(item.get("text", str(item)))
+            else:
+                parts.append(str(item))
+        return "".join(parts)
+    return str(content)
 
 def chat(message, history):
     """Chat function for Gradio ChatInterface with streaming."""
@@ -51,11 +66,7 @@ def chat(message, history):
 
     # Stream the agent response
     for event in graph.stream(
-            {
-        "messages": [
-            HumanMessage(content=message)
-        ]
-    },
+        {"messages": [HumanMessage(content=message)]},
         config=config,
         stream_mode="updates"
     ):
@@ -63,12 +74,12 @@ def chat(message, history):
             # Capture intent from router
             if "intent" in node_output:
                 intent = node_output["intent"]
-            # Stream message content
+            # Stream message content safely
             if "messages" in node_output:
                 for msg in node_output["messages"]:
-                    if hasattr(msg, "content") and msg.content:
-                        full_response += msg.content
-                        # Prefix with intent emoji on first token
+                    text_piece = _extract_text(getattr(msg, "content", ""))
+                    if text_piece:
+                        full_response += text_piece
                         emoji = INTENT_EMOJIS.get(intent, "")
                         prefix = f"{emoji} Mode: {intent.title()}\n\n" if intent else ""
                         yield prefix + full_response
@@ -83,7 +94,7 @@ def chat(message, history):
             source = cite.get("source", "Unknown")
             page = cite.get("page_number", "?")
             passage = cite.get("passage", "")[:150]
-            verified = "Verified" if cite.get("verified", False) else "Unverified"
+            verified = "Verified" if cite.get("verified", False) else "Unverified (Fast Mode)"
             citation_text += f"\n[{i}] **{source}** (p.{page}) - {verified}\n> {passage}...\n"
         emoji = INTENT_EMOJIS.get(intent, "")
         prefix = f"{emoji} Mode: {intent.title()}\n\n" if intent else ""
@@ -99,10 +110,6 @@ def load_benchmark_data():
             "Answer Relevancy": ["-", "-", "-", "-"],
             "Citation Accuracy": ["-", "-", "-", "-"]
         }
-        # Try to load actual results from benchmark report
-        if pd.io.common.file_exists("evals/benchmark_report.md"):
-            # Parse markdown table if it exists
-            pass
         return pd.DataFrame(data)
     except Exception:
         return pd.DataFrame()
@@ -148,12 +155,11 @@ with gr.Blocks(title="Document Intelligence Agent") as demo:
 
     with gr.Tab("Metrics"):
         gr.Markdown("### RAG Pipeline Benchmark Results")
-        benchmark_table = gr.DataFrame(
+        gr.DataFrame(
             value=load_benchmark_data(),
             label="Pipeline Comparison"
         )
         gr.Markdown("*Run the /evaluate endpoint or re-run benchmarks to populate with real scores.*")
-
 
 if __name__ == "__main__":
     demo.launch(server_name="0.0.0.0", server_port=7860)
